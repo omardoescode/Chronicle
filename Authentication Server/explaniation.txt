@@ -1,0 +1,165 @@
+ملف الشرح - شرح سريع للـ project flow بين الملفات
+
+مقدمة
+------
+هذا الملف يشرح بطريقة مبسطة كل ملف في المشروع وما هي وظيفته، ثم يوضّح التدفّق (flow) عند وصول طلب GraphQL وطريقة تسجيل مستخدم أو تسجيل الدخول واستدعاء معلومات المستخدم.
+
+أولاً — شرح كل ملف ووظيفته
+--------------------------
+- package.json
+  - يحتوي الـ scripts (مثل `npm run dev`, `npm run typecheck`) وقائمة الاعتمادات.
+
+- tsconfig.json
+  - إعدادات TypeScript (rootDir, outDir, strict، إلخ).
+
+- .env.example
+  - نموذج لمتغيرات البيئة المطلوب تعريفها، مثل JWT_SECRET.
+
+- README.md
+  - تعليمات تشغيل سريعة ووصف المشروع.
+
+- src/index.ts
+  - البداية (bootstrap):
+  - يستورد الـ schema والـ resolvers ويجعلهم قابلين للاستخدام في Apollo Server.
+  - يعرّف الـ context لكل طلب — يقرأ هيدر Authorization وينادي `getUserFromToken` لاستخراج المستخدم من التوكن.
+  - يشغّل السيرفر على البورت 4000.
+
+- src/schema.ts
+  - تعريفات GraphQL (types, queries, mutations).
+  - يحتوي `type User` و`Query { me, users }` و`Mutation { signup, login }`.
+  - تحدد أي مدخلات أو نواتج لكل عملية.
+
+- src/resolvers.ts
+  - تطبيق المنطق لكل Query و Mutation.
+  - Query:
+    - `me` — يرجع بيانات المستخدم الحالي (إذا كان متصلًا في الـ context).
+    - `users` — يرجع قائمة المستخدمين (باستخدام helper من userRepo).
+  - Mutation:
+    - `signup` — يتحقق من تكرار الايميل/الهاتف، يعمل هاش لكلمة المرور، ينشئ المستخدم في المخزن، ويرجع بيانات المستخدم.
+    - `login` — يجد المستخدم بواسطة email أو name أو phone، يحقّق كلمة المرور، ويرجع بيانات المستخدم.
+  - يحتوي أيضًا على getters لحقول User.
+
+- src/auth.ts
+  - وظائف JWT:
+    - `signToken(userId)` يصنع JWT
+    - `verifyToken(token)` يتحقق من التوكن
+    - `getUserFromToken(authHeader)` يقرأ Authorization header بصيغة "Bearer <token>", يتحقق من التوكن ويستخرج المستخدم من userRepo
+
+- src/userRepo.ts
+  - مخزن مستخدمين بسيط في الذاكرة (Map).
+  - دوال: `createUser`, `findUserByEmail`, `findUserByName`, `findUserByPhone`, `findUserById`, `listUsers`, `getAllUsers`.
+  - ملاحظة: البيانات غير دائمة — تمسح عند إعادة تشغيل السيرفر.
+
+- src/types.ts
+  - تعريف TypeScript لواجهة `User` (id, email, name?, phone?, passwordHash)
+
+ثانياً — التدفق (flow) خطوة-بخطوة عند وصول طلب
+-------------------------------------------------
+1) العميل (GraphQL client أو المتصفح) يرسل طلب HTTP POST إلى مسار GraphQL (عادة http://localhost:4000/).
+   - إذا العملية تحتاج مصادقة، يجب تمرير هيدر: Authorization: Bearer <TOKEN>
+
+2) `src/index.ts` (Apollo Server) يستدعي `context` لكل طلب:
+   - يقرأ هيدر Authorization.
+   - يستدعي `getUserFromToken(auth)` من `src/auth.ts`.
+   - `getUserFromToken` يحلل الهيدر، يستدعي `verifyToken` ثم `findUserById` من `userRepo`.
+   - إن وجد المستخدم، يُضاف كـ `context.user` وإلا يكون null.
+
+3) بعد إعداد الـ context، Apollo يمرّر الطلب إلى الـ resolvers (`src/resolvers.ts`).
+
+4) سيناريوات شائعة:
+
+   a) Signup (إنشاء مستخدم جديد) — client calls mutation `signup(email,password,name,phone)`:
+      - resolver `signup`:
+        - يتحقق إن الايميل مستخدم بالفعل عبر `findUserByEmail`.
+        - إن مرّر رقم هاتف يتحقق من تكراره عبر `findUserByPhone`.
+        - يعمل هاش لكلمة المرور باستخدام bcrypt.
+        - ينشئ المستخدم عبر `createUser` (userRepo).
+        - يرجع بيانات المستخدم (بدون passwordHash).
+      - ملاحظة: حالياً لا يعيد توكن. لو أردت توكن تُعاد مع الـ user أستطيع إضافتها.
+
+   b) Login (تسجيل دخول) — client calls mutation `login(identifier,password)`:
+      - resolver `login`:
+        - يحاول إيجاد المستخدم عبر email أو name أو phone.
+        - يقارن كلمة المرور بالـ passwordHash عبر bcrypt.compare.
+        - إن صالحة، يرجع بيانات المستخدم (بدون passwordHash).
+        - لا يتم إصدار توكن تلقائيًا في النسخة الحالية.
+
+   c) Me (الحصول على بيانات المستخدم الحالي) — client calls query `me`:
+      - `index.ts` كان قد عبأ `context.user` (إن وُجد توكن صالح).
+      - `me` resolver يقرأ `context.user` ويُرجع بيانات المستخدم أو `null` إن لم يكن هناك تحقق.
+
+   d) Users (قائمة المستخدمين):
+      - يقوم resolver باستدعاء `getAllUsers()` التي تعيد كل المستخدمين بدون passwordHash.
+
+ثالثاً — أمثلة تشغيل وسيناريوهات اختبار (PowerShell)
+------------------------------------------------------
+- شغّل السيرفر (ضمن مجلد المشروع):
+```powershell
+# مؤقتًا في الجلسة الحالية
+$env:JWT_SECRET = 'a_strong_secret'
+npm run dev
+```
+
+- إنشاء مستخدم (GraphQL mutation - مثال عبر GraphQL Playground):
+```graphql
+mutation {
+  signup(email: "alice@example.com", password: "password123", name: "Alice", phone: "1234567890") {
+    id
+    email
+    name
+    phone
+  }
+}
+```
+
+- تسجيل الدخول:
+```graphql
+mutation {
+  login(identifier: "alice@example.com", password: "password123") {
+    id
+    email
+    name
+    phone
+  }
+}
+```
+
+- الحصول على المستخدم الحالي (يجب إضافة Authorization header إذا أردت اعتماده):
+```graphql
+query {
+  me {
+    id
+    email
+    name
+    phone
+  }
+}
+```
+
+- الحصول على كل المستخدمين:
+```graphql
+query {
+  users {
+    id
+    email
+    name
+    phone
+  }
+}
+```
+
+رابعًا — ملاحظات وتوصيات
+------------------------
+- حالياً يتم استخدام مخزن في الذاكرة: إذا تريد حفظ دائم استخدم قاعدة بيانات (Postgres, MySQL, MongoDB...) واستبدل `userRepo` بدوال تقوم باستعلام DB.
+- حالياً لم يعد `signup` أو `login` يعيدان JWT. إذا تريد سلوكًا يعيد توكن (شائع)، يمكن تعديل resolvers ليرجع `{ token, user }` أو إعادة تعريف `AuthPayload` في الـ schema.
+- تأكد من وضع قيمة قوية لـ `JWT_SECRET` في `.env` عند الانتقال لبيئة حقيقية.
+- يمكن إضافة فحوصات إضافية: التحقق من صيغ email، التحقق من طول كلمة المرور، منع هجمات brute-force، تقييد معدل الطلبات.
+
+خامسًا — خطوات مقترحة قادمة (اختيارية)
+------------------------------------
+- إضافة JWT في `login` و`signup` وإرجاعه مع الـ user.
+- استبدال `userRepo` باتصال بقاعدة بيانات.
+- إضافة pagination وفلترة في `users`.
+- إضافة وحدات اختبار (unit tests) لـ signup/login/me.
+
+إن أردت أطبّق أيًا من الخطوات المقترحة مباشرةً: قلّي أي واحدة (مثلاً: "Add token to login/signup") وسأطبقها الآن.
