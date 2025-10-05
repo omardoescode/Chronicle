@@ -1,5 +1,19 @@
 import { app } from "@getcronit/pylon";
 import init from "./init";
+import { signup, login, getCurrentUser } from "./service/auth";
+import { getAllUsers } from "./db/auth";
+
+export interface SignupInput {
+  name: string;
+  email: string;
+  password: string;
+  timezone: number;
+}
+
+export interface LoginInput {
+  identifier: string;  // Could be email, userId, or name
+  password: string;
+}
 
 await init()
   .then(() => {
@@ -13,11 +27,28 @@ await init()
 
 export const graphql = {
   Query: {
-    hello: () => {
-      return "Hello, world!";
+    me: async (_, __, { headers }) => {
+      const token = headers.authorization?.replace('Bearer ', '');
+      if (!token) throw new Error('Authentication required');
+      return await getCurrentUser(token);
     },
+    users: async (_, __, { headers }) => {
+      const token = headers.authorization?.replace('Bearer ', '');
+      if (!token) throw new Error('Authentication required');
+      await getCurrentUser(token);
+      return await getAllUsers();
+    }
   },
-  Mutation: {},
+  Mutation: {
+    signup: async (_, { input }) => {
+      const { name, email, password, timezone } = input;
+      return await signup(name, email, password, timezone);
+    },
+    login: async (_, { input }) => {
+      const { identifier, password } = input;
+      return await login(identifier, password);
+    }
+  },
 };
 
 export default app;
