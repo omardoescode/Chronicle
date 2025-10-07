@@ -59,15 +59,46 @@ export const scalarsEnumsHash: ScalarsEnumsHash = {
 export const generatedSchema = {
   AppResponse: {
     __typename: { __type: "String!" },
-    data: { __type: "Any!" },
+    data: { __type: "Data" },
     errors: { __type: "[String!]!" },
     success: { __type: "Boolean!" },
+  },
+  AppResponse_1: {
+    __typename: { __type: "String!" },
+    data: { __type: "Data_1" },
+    errors: { __type: "[String!]!" },
+    success: { __type: "Boolean!" },
+  },
+  Data: {
+    __typename: { __type: "String!" },
+    token: { __type: "String!" },
+    user: { __type: "User!" },
+  },
+  Data_1: {
+    __typename: { __type: "String!" },
+    token: { __type: "String!" },
+    user: { __type: "User!" },
+  },
+  User: {
+    __typename: { __type: "String!" },
+    email: { __type: "String!" },
+    name: { __type: "String!" },
+    user_id: { __type: "Number!" },
   },
   mutation: {
     __typename: { __type: "String!" },
     login: {
       __type: "AppResponse!",
-      __args: { email: "String!", password: "String!" },
+      __args: { email: "String!", password: "String!", test: "String" },
+    },
+    register: {
+      __type: "AppResponse_1!",
+      __args: {
+        email: "String!",
+        name: "String!",
+        password: "String!",
+        timezone: "Number!",
+      },
     },
   },
   query: { __typename: { __type: "String!" }, hello: { __type: "String!" } },
@@ -76,9 +107,35 @@ export const generatedSchema = {
 
 export interface AppResponse {
   __typename?: "AppResponse";
-  data: ScalarsEnums["Any"];
+  data?: Maybe<Data>;
   errors: Array<ScalarsEnums["String"]>;
   success: ScalarsEnums["Boolean"];
+}
+
+export interface AppResponse_1 {
+  __typename?: "AppResponse_1";
+  data?: Maybe<Data_1>;
+  errors: Array<ScalarsEnums["String"]>;
+  success: ScalarsEnums["Boolean"];
+}
+
+export interface Data {
+  __typename?: "Data";
+  token: ScalarsEnums["String"];
+  user: User;
+}
+
+export interface Data_1 {
+  __typename?: "Data_1";
+  token: ScalarsEnums["String"];
+  user: User;
+}
+
+export interface User {
+  __typename?: "User";
+  email: ScalarsEnums["String"];
+  name: ScalarsEnums["String"];
+  user_id: ScalarsEnums["Number"];
 }
 
 export interface Mutation {
@@ -86,7 +143,14 @@ export interface Mutation {
   login: (args: {
     email: ScalarsEnums["String"];
     password: ScalarsEnums["String"];
+    test?: Maybe<ScalarsEnums["String"]>;
   }) => AppResponse;
+  register: (args: {
+    email: ScalarsEnums["String"];
+    name: ScalarsEnums["String"];
+    password: ScalarsEnums["String"];
+    timezone: ScalarsEnums["Number"];
+  }) => AppResponse_1;
 }
 
 export interface Query {

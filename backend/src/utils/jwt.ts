@@ -1,7 +1,7 @@
 import { JWTPayload, SignJWT } from "jose";
 import env from "./env";
 
-const secret = env.JWT_SECRET;
+const secret = new TextEncoder().encode(env.JWT_SECRET);
 
 export async function generateToken(payload: JWTPayload, expiresIn = "1h") {
   return await new SignJWT(payload)
