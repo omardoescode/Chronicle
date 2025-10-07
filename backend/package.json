@@ -10,14 +10,17 @@
   },
   "dependencies": {
     "@getcronit/pylon": "^2.0.0",
+    "bcrypt": "^6.0.0",
     "bun-types": "^1.1.18",
     "dotenv": "^17.2.3",
+    "jose": "^6.1.0",
     "pg": "^8.16.3",
     "zod": "^4.1.11"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
     "@getcronit/pylon-dev": "^1.0.0",
+    "@types/bcrypt": "^6.0.0",
     "@types/pg": "^8.15.5",
     "eslint": "^9.36.0",
     "globals": "^16.4.0",

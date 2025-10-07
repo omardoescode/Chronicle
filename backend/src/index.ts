@@ -1,9 +1,11 @@
-import { app } from "@getcronit/pylon";
+import { app, getContext } from "@getcronit/pylon";
 import init from "./init";
+import { login } from "./service/auth";
+import { ErrorResponse, SuccessResponse } from "./utils/responses";
 
 await init()
   .then(() => {
-    console.log("Initialize the database");
+    console.log("The database has been initialized");
   })
   .catch((err) => {
     console.error("Failed to initialize the database");
@@ -13,11 +15,15 @@ await init()
 
 export const graphql = {
   Query: {
-    hello: () => {
-      return "Hello, world!";
+    hello: () => "world",
+  },
+  Mutation: {
+    async login(email: string, password: string) {
+      const token = await login(email, password);
+      if (token) return SuccessResponse(token);
+      return ErrorResponse(["Invalid credentials. Check email or password"]);
     },
   },
-  Mutation: {},
 };
 
 export default app;

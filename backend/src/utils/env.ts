@@ -15,6 +15,7 @@ const envSchema = z.object({
     .string()
     .default("1000")
     .transform((val) => toNumber(val)),
+  JWT_SECRET: z.string().min(10, "JWT_SECRET must be >= 10 characters"),
 });
 
 const env = envSchema.parse(process.env);

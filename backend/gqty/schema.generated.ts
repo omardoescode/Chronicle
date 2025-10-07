@@ -57,13 +57,36 @@ export const scalarsEnumsHash: ScalarsEnumsHash = {
   Void: true,
 };
 export const generatedSchema = {
-  mutation: {},
+  AppResponse: {
+    __typename: { __type: "String!" },
+    data: { __type: "Any!" },
+    errors: { __type: "[String!]!" },
+    success: { __type: "Boolean!" },
+  },
+  mutation: {
+    __typename: { __type: "String!" },
+    login: {
+      __type: "AppResponse!",
+      __args: { email: "String!", password: "String!" },
+    },
+  },
   query: { __typename: { __type: "String!" }, hello: { __type: "String!" } },
   subscription: {},
 } as const;
 
+export interface AppResponse {
+  __typename?: "AppResponse";
+  data: ScalarsEnums["Any"];
+  errors: Array<ScalarsEnums["String"]>;
+  success: ScalarsEnums["Boolean"];
+}
+
 export interface Mutation {
   __typename?: "Mutation";
+  login: (args: {
+    email: ScalarsEnums["String"];
+    password: ScalarsEnums["String"];
+  }) => AppResponse;
 }
 
 export interface Query {

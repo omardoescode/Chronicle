@@ -1,1 +1,12 @@
-// TODO: Create basic utilities for using JWT
+import { JWTPayload, SignJWT } from "jose";
+import env from "./env";
+
+const secret = env.JWT_SECRET;
+
+export async function generateToken(payload: JWTPayload, expiresIn = "1h") {
+  return await new SignJWT(payload)
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime(expiresIn)
+    .sign(secret);
+}

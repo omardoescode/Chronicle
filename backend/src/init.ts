@@ -11,9 +11,7 @@ export default function init(): Promise<void> {
       console.error(`file ${dir} doesn't exist`, err);
       throw err;
     })
-    .then((sql) => {
-      return db.query(sql);
-    })
+    .then((sql) => db.query(sql))
     .then(() => {
       console.log("Database has been initialized!");
     })
