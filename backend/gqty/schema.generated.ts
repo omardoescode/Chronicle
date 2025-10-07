@@ -59,11 +59,17 @@ export const scalarsEnumsHash: ScalarsEnumsHash = {
 export const generatedSchema = {
   AppResponse: {
     __typename: { __type: "String!" },
-    data: { __type: "Data" },
+    data: { __type: "Any!" },
     errors: { __type: "[String!]!" },
     success: { __type: "Boolean!" },
   },
   AppResponse_1: {
+    __typename: { __type: "String!" },
+    data: { __type: "Data" },
+    errors: { __type: "[String!]!" },
+    success: { __type: "Boolean!" },
+  },
+  AppResponse_2: {
     __typename: { __type: "String!" },
     data: { __type: "Data_1" },
     errors: { __type: "[String!]!" },
@@ -88,11 +94,11 @@ export const generatedSchema = {
   mutation: {
     __typename: { __type: "String!" },
     login: {
-      __type: "AppResponse!",
-      __args: { email: "String!", password: "String!", test: "String" },
+      __type: "AppResponse_1!",
+      __args: { email: "String!", password: "String!" },
     },
     register: {
-      __type: "AppResponse_1!",
+      __type: "AppResponse_2!",
       __args: {
         email: "String!",
         name: "String!",
@@ -101,19 +107,29 @@ export const generatedSchema = {
       },
     },
   },
-  query: { __typename: { __type: "String!" }, hello: { __type: "String!" } },
+  query: {
+    __typename: { __type: "String!" },
+    hello: { __type: "AppResponse!" },
+  },
   subscription: {},
 } as const;
 
 export interface AppResponse {
   __typename?: "AppResponse";
-  data?: Maybe<Data>;
+  data: ScalarsEnums["Any"];
   errors: Array<ScalarsEnums["String"]>;
   success: ScalarsEnums["Boolean"];
 }
 
 export interface AppResponse_1 {
   __typename?: "AppResponse_1";
+  data?: Maybe<Data>;
+  errors: Array<ScalarsEnums["String"]>;
+  success: ScalarsEnums["Boolean"];
+}
+
+export interface AppResponse_2 {
+  __typename?: "AppResponse_2";
   data?: Maybe<Data_1>;
   errors: Array<ScalarsEnums["String"]>;
   success: ScalarsEnums["Boolean"];
@@ -143,19 +159,18 @@ export interface Mutation {
   login: (args: {
     email: ScalarsEnums["String"];
     password: ScalarsEnums["String"];
-    test?: Maybe<ScalarsEnums["String"]>;
-  }) => AppResponse;
+  }) => AppResponse_1;
   register: (args: {
     email: ScalarsEnums["String"];
     name: ScalarsEnums["String"];
     password: ScalarsEnums["String"];
     timezone: ScalarsEnums["Number"];
-  }) => AppResponse_1;
+  }) => AppResponse_2;
 }
 
 export interface Query {
   __typename?: "Query";
-  hello: ScalarsEnums["String"];
+  hello: AppResponse;
 }
 
 export interface Subscription {

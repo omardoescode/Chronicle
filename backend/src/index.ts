@@ -1,9 +1,10 @@
-import { app, getContext } from "@getcronit/pylon";
+import { app } from "@getcronit/pylon";
 import init from "./init";
 import { login, register } from "./service/auth";
 import { AppResponse, ErrorResponse, SuccessResponse } from "./utils/responses";
 import { validateTimezone } from "./utils/validation";
-import { User } from "./types/auth";
+import { type User } from "./validation/auth";
+import { authorized } from "./middleware/auth";
 
 await init()
   .then(() => {
@@ -17,13 +18,12 @@ await init()
 
 export const graphql = {
   Query: {
-    hello: () => "world",
+    hello: authorized(async (user) => SuccessResponse(user)),
   },
   Mutation: {
     async login(
       email: string,
-      password: string,
-      test?: string
+      password: string
     ): Promise<AppResponse<{ token: string; user: User }>> {
       const data = await login(email, password);
       if (data instanceof Error) return ErrorResponse([data.message]);

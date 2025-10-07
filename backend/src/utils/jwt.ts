@@ -1,4 +1,4 @@
-import { JWTPayload, SignJWT } from "jose";
+import { JWTPayload, SignJWT, jwtVerify } from "jose";
 import env from "./env";
 
 const secret = new TextEncoder().encode(env.JWT_SECRET);
@@ -9,4 +9,9 @@ export async function generateToken(payload: JWTPayload, expiresIn = "1h") {
     .setIssuedAt()
     .setExpirationTime(expiresIn)
     .sign(secret);
+}
+
+export async function verifyToken(token: string) {
+  const { payload } = await jwtVerify(token, secret);
+  return payload;
 }

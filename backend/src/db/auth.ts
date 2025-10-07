@@ -1,5 +1,6 @@
-import { UserWithPasswordHash } from "@/types/auth";
+import { type UserWithPasswordHash } from "@/validation/auth";
 import db from ".";
+import { Int } from "@getcronit/pylon";
 
 const getUserByEmail = async (
   email: string
@@ -19,7 +20,7 @@ const createUser = async (data: {
   name: string;
   email: string;
   password_hash: string;
-  timezone: number;
+  timezone: Int;
 }) => {
   const { name, email, password_hash, timezone } = data;
   const new_user_id = await db.query({
