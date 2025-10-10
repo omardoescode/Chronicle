@@ -1,8 +1,11 @@
 import z from "zod";
 
-export const EditorSchema = z.enum(["vscode"]);
+export enum Editor {
+  VSCODE = "vscode",
+  UNKNOWN = "unknown",
+}
 
-export type Editor = z.infer<typeof EditorSchema>;
+export const EditorSchema = z.enum(Object.values(Editor));
 
 export const ApiKeySchema = z.string().regex(/^[A-Za-z0-9]{64}$/, {
   message: "API key must be 64 alphanumeric characters.",

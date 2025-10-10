@@ -3,6 +3,7 @@ import { AppResponse, ErrorResponse } from "@/utils/responses";
 import { User, UserSchema } from "./validation";
 import { getContext } from "@getcronit/pylon";
 
+// TODO: Use the errToResponse instead here
 export const authorized =
   <T, Args extends any[]>(
     fn: (user: User, ...args: Args) => Promise<AppResponse<T>>

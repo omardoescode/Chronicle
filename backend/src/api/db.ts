@@ -22,7 +22,7 @@ const setAPIMetadata = async (
   editor: Editor,
   machine_name: string,
   os: string
-): Promise<void | UserNotFound> => {
+): Promise<void | ApiMetadataAlreadySet> => {
   try {
     await db.query("BEGIN");
 
@@ -38,7 +38,7 @@ const setAPIMetadata = async (
 
     const { user_id, metadata_set } = keyRes.rows[0];
 
-    if (metadata_set) throw new ApiMetadataAlreadySet();
+    if (metadata_set) return new ApiMetadataAlreadySet();
 
     // Create the machine
     const machineQ = await db.query({
@@ -55,7 +55,7 @@ const setAPIMetadata = async (
     await db.query("COMMIT");
   } catch (err) {
     db.query("rollback");
-    throw err;
+    if (err) throw err; // an unknown error, throw, don't return
   }
 };
 export { createAPIKey, setAPIMetadata };

@@ -45,10 +45,16 @@ export interface Scalars {
   Void: { input: any; output: any };
 }
 
+export enum EditorInput {
+  UNKNOWN = "UNKNOWN",
+  VSCODE = "VSCODE",
+}
+
 export const scalarsEnumsHash: ScalarsEnumsHash = {
   Any: true,
   Boolean: true,
   DateTimeISO: true,
+  EditorInput: true,
   File: true,
   JSON: true,
   JSONObject: true,
@@ -129,7 +135,7 @@ export const generatedSchema = {
       __type: "SetApiMetadata!",
       __args: {
         api_key: "String!",
-        editor: "String!",
+        editor: "EditorInput!",
         machine_name: "String!",
         os: "String!",
       },
@@ -222,7 +228,7 @@ export interface Mutation {
   }) => AppResponse_2;
   setApiMetadata: (args: {
     api_key: ScalarsEnums["String"];
-    editor: ScalarsEnums["String"];
+    editor: EditorInput;
     machine_name: ScalarsEnums["String"];
     os: ScalarsEnums["String"];
   }) => SetApiMetadata;
@@ -247,4 +253,6 @@ export type ScalarsEnums = {
   [Key in keyof Scalars]: Scalars[Key] extends { output: unknown }
     ? Scalars[Key]["output"]
     : never;
-} & {};
+} & {
+  EditorInput: EditorInput;
+};

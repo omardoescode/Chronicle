@@ -1,7 +1,7 @@
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'editor') THEN
-    CREATE TYPE Editor AS ENUM ('vscode');
+    CREATE TYPE Editor AS ENUM ('vscode', 'unknown');
   END IF;
 END$$;
 
