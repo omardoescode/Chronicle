@@ -59,32 +59,45 @@ export const scalarsEnumsHash: ScalarsEnumsHash = {
 export const generatedSchema = {
   AppResponse: {
     __typename: { __type: "String!" },
-    data: { __type: "Any!" },
+    data: { __type: "Data" },
     errors: { __type: "[String!]!" },
     success: { __type: "Boolean!" },
   },
   AppResponse_1: {
     __typename: { __type: "String!" },
-    data: { __type: "Data" },
+    data: { __type: "Data_1" },
     errors: { __type: "[String!]!" },
     success: { __type: "Boolean!" },
   },
   AppResponse_2: {
     __typename: { __type: "String!" },
-    data: { __type: "Data_1" },
+    data: { __type: "Data_2" },
+    errors: { __type: "[String!]!" },
+    success: { __type: "Boolean!" },
+  },
+  AppResponse_3: {
+    __typename: { __type: "String!" },
+    data: { __type: "Data_3" },
     errors: { __type: "[String!]!" },
     success: { __type: "Boolean!" },
   },
   Data: {
     __typename: { __type: "String!" },
-    token: { __type: "String!" },
-    user: { __type: "User!" },
+    email: { __type: "String!" },
+    name: { __type: "String!" },
+    user_id: { __type: "Number!" },
   },
   Data_1: {
     __typename: { __type: "String!" },
     token: { __type: "String!" },
     user: { __type: "User!" },
   },
+  Data_2: {
+    __typename: { __type: "String!" },
+    token: { __type: "String!" },
+    user: { __type: "User!" },
+  },
+  Data_3: { __typename: { __type: "String!" }, api_key: { __type: "String!" } },
   User: {
     __typename: { __type: "String!" },
     email: { __type: "String!" },
@@ -93,6 +106,7 @@ export const generatedSchema = {
   },
   mutation: {
     __typename: { __type: "String!" },
+    generateApiKey: { __type: "AppResponse_3!" },
     login: {
       __type: "AppResponse_1!",
       __args: { email: "String!", password: "String!" },
@@ -116,35 +130,54 @@ export const generatedSchema = {
 
 export interface AppResponse {
   __typename?: "AppResponse";
-  data: ScalarsEnums["Any"];
+  data?: Maybe<Data>;
   errors: Array<ScalarsEnums["String"]>;
   success: ScalarsEnums["Boolean"];
 }
 
 export interface AppResponse_1 {
   __typename?: "AppResponse_1";
-  data?: Maybe<Data>;
+  data?: Maybe<Data_1>;
   errors: Array<ScalarsEnums["String"]>;
   success: ScalarsEnums["Boolean"];
 }
 
 export interface AppResponse_2 {
   __typename?: "AppResponse_2";
-  data?: Maybe<Data_1>;
+  data?: Maybe<Data_2>;
+  errors: Array<ScalarsEnums["String"]>;
+  success: ScalarsEnums["Boolean"];
+}
+
+export interface AppResponse_3 {
+  __typename?: "AppResponse_3";
+  data?: Maybe<Data_3>;
   errors: Array<ScalarsEnums["String"]>;
   success: ScalarsEnums["Boolean"];
 }
 
 export interface Data {
   __typename?: "Data";
-  token: ScalarsEnums["String"];
-  user: User;
+  email: ScalarsEnums["String"];
+  name: ScalarsEnums["String"];
+  user_id: ScalarsEnums["Number"];
 }
 
 export interface Data_1 {
   __typename?: "Data_1";
   token: ScalarsEnums["String"];
   user: User;
+}
+
+export interface Data_2 {
+  __typename?: "Data_2";
+  token: ScalarsEnums["String"];
+  user: User;
+}
+
+export interface Data_3 {
+  __typename?: "Data_3";
+  api_key: ScalarsEnums["String"];
 }
 
 export interface User {
@@ -156,6 +189,7 @@ export interface User {
 
 export interface Mutation {
   __typename?: "Mutation";
+  generateApiKey: AppResponse_3;
   login: (args: {
     email: ScalarsEnums["String"];
     password: ScalarsEnums["String"];

@@ -1,5 +1,5 @@
-import { type UserWithPasswordHash } from "@/validation/auth";
-import db from ".";
+import { type UserWithPasswordHash } from "./validation";
+import db from "@/db";
 import { Int } from "@getcronit/pylon";
 
 const getUserByEmail = async (

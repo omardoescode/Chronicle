@@ -1,5 +1,5 @@
-import * as db from "@/db/auth";
-import { type User } from "@/validation/auth";
+import * as db from "./db";
+import { type User } from "./validation";
 import { generateToken } from "@/utils/jwt";
 import bcrypt from "bcrypt";
 
