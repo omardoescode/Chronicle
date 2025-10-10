@@ -38,7 +38,7 @@ const setAPIMetadata = async (
 
     const { user_id, metadata_set } = keyRes.rows[0];
 
-    if (metadata_set) return new ApiMetadataAlreadySet();
+    if (metadata_set) throw new ApiMetadataAlreadySet();
 
     // Create the machine
     const machineQ = await db.query({

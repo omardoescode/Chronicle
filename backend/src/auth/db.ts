@@ -1,4 +1,4 @@
-import { type UserWithPasswordHash } from "./validation";
+import { type User, UserWithPasswordHash } from "./validation";
 import db from "@/db";
 import { Int } from "@getcronit/pylon";
 import { UserNotFound } from "./errors";

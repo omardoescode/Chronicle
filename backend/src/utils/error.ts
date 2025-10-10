@@ -19,7 +19,6 @@ export class AppError extends Error {
     this.code = options?.code ?? "INTERNAL_ERROR";
     this.details = options?.details;
 
-    // Maintains proper stack trace (especially in Node)
     if (options?.cause) this.cause = options.cause;
     Error.captureStackTrace?.(this, this.constructor);
   }
