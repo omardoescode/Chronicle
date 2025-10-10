@@ -26,3 +26,21 @@ export class EmailExists extends AppError {
     });
   }
 }
+
+export class UnauthorizedUser extends AppError {
+  constructor() {
+    super(`Unauthroized User`, {
+      code: "UNAUTHROIZED",
+      isOperational: true,
+    });
+  }
+}
+
+export class InvalidToken extends AppError {
+  constructor() {
+    super(`Invalid Token`, {
+      code: "InvalidToken",
+      isOperational: true,
+    });
+  }
+}

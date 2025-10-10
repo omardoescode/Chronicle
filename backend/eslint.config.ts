@@ -3,7 +3,18 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 import { defineConfig } from "eslint/config";
 
-export default defineConfig([
-  { files: ["**/*.{js,mjs,cjs,ts,mts,cts}"], plugins: { js }, extends: ["js/recommended"], languageOptions: { globals: globals.node } },
-  tseslint.configs.recommended,
-]);
+export default defineConfig({
+  files: ["**/*.{js,mjs,cjs,ts,mts,cts}"],
+  plugins: { js },
+  extends: [js.configs.recommended, ...tseslint.configs.recommended],
+  languageOptions: {
+    globals: globals.node,
+  },
+  rules: {
+    // ignore unused vars starting with '_'
+    "@typescript-eslint/no-unused-vars": [
+      "error",
+      { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+    ],
+  },
+});

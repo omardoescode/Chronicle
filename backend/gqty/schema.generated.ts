@@ -46,8 +46,8 @@ export interface Scalars {
 }
 
 export enum EditorInput {
-  UNKNOWN = "UNKNOWN",
-  VSCODE = "VSCODE",
+  unknown = "unknown",
+  vscode = "vscode",
 }
 
 export const scalarsEnumsHash: ScalarsEnumsHash = {
