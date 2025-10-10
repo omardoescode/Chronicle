@@ -1,10 +1,17 @@
 import { app } from "@getcronit/pylon";
 import * as auth from "@/auth/service";
 import * as api from "@/api/service";
-import { AppResponse, ErrorResponse, SuccessResponse } from "./utils/responses";
+import {
+  AppResponse,
+  ErrorResponse,
+  errToResponse,
+  SuccessResponse,
+} from "./utils/responses";
 import { validateTimezone } from "./utils/validation";
 import { type User } from "./auth/validation";
 import { authorized } from "./auth/middleware";
+import { AppError } from "./utils/error";
+import { ApiKey, Editor } from "./api/validation";
 
 export const graphql = {
   Query: {
@@ -16,7 +23,7 @@ export const graphql = {
       password: string
     ): Promise<AppResponse<{ token: string; user: User }>> {
       const data = await auth.login(email, password);
-      if (data instanceof Error) return ErrorResponse([data.message]);
+      if (data instanceof AppError) return errToResponse(data);
       return SuccessResponse(data);
     },
 
@@ -36,16 +43,26 @@ export const graphql = {
         timezone,
       });
 
-      if (data instanceof Error) return ErrorResponse([data.message]);
+      if (data instanceof AppError) return errToResponse(data);
       return SuccessResponse(data);
     },
     generateApiKey: authorized(
       async (user): Promise<AppResponse<{ api_key: string }>> => {
         const api_key = await api.generateApiKey(user.user_id);
-        if (api_key instanceof Error) return ErrorResponse([api_key.message]);
+        if (api_key instanceof AppError) return errToResponse(api_key);
         return SuccessResponse({ api_key });
       }
     ),
+    async setApiMetadata(
+      api_key: ApiKey,
+      editor: Editor,
+      machine_name: string,
+      os: string
+    ) {
+      const res = await api.setApiMetadata(api_key, editor, machine_name, os);
+      if (res instanceof AppError) return errToResponse(res);
+      return SuccessResponse({ api_key });
+    },
   },
 };
 

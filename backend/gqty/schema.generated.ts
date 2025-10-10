@@ -98,6 +98,11 @@ export const generatedSchema = {
     user: { __type: "User!" },
   },
   Data_3: { __typename: { __type: "String!" }, api_key: { __type: "String!" } },
+  SetApiMetadata: {
+    __typename: { __type: "String!" },
+    errors: { __type: "[String!]!" },
+    success: { __type: "Boolean!" },
+  },
   User: {
     __typename: { __type: "String!" },
     email: { __type: "String!" },
@@ -118,6 +123,15 @@ export const generatedSchema = {
         name: "String!",
         password: "String!",
         timezone: "Number!",
+      },
+    },
+    setApiMetadata: {
+      __type: "SetApiMetadata!",
+      __args: {
+        api_key: "String!",
+        editor: "String!",
+        machine_name: "String!",
+        os: "String!",
       },
     },
   },
@@ -180,6 +194,12 @@ export interface Data_3 {
   api_key: ScalarsEnums["String"];
 }
 
+export interface SetApiMetadata {
+  __typename?: "SetApiMetadata";
+  errors: Array<ScalarsEnums["String"]>;
+  success: ScalarsEnums["Boolean"];
+}
+
 export interface User {
   __typename?: "User";
   email: ScalarsEnums["String"];
@@ -200,6 +220,12 @@ export interface Mutation {
     password: ScalarsEnums["String"];
     timezone: ScalarsEnums["Number"];
   }) => AppResponse_2;
+  setApiMetadata: (args: {
+    api_key: ScalarsEnums["String"];
+    editor: ScalarsEnums["String"];
+    machine_name: ScalarsEnums["String"];
+    os: ScalarsEnums["String"];
+  }) => SetApiMetadata;
 }
 
 export interface Query {
