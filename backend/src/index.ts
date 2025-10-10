@@ -1,6 +1,6 @@
 import { app } from "@getcronit/pylon";
 import * as auth from "@/auth/service";
-import * as api from "@/service/api";
+import * as api from "@/api/service";
 import { AppResponse, ErrorResponse, SuccessResponse } from "./utils/responses";
 import { validateTimezone } from "./utils/validation";
 import { type User } from "./auth/validation";

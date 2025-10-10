@@ -1,4 +1,5 @@
 import * as db from "./db";
+import { EmailExists, InvalidPassword, UserNotFound } from "./errors";
 import { type User } from "./validation";
 import { generateToken } from "@/utils/jwt";
 import bcrypt from "bcrypt";
@@ -8,12 +9,12 @@ const SALT_ROUNDS = 10;
 const login = async (
   email: string,
   password: string
-): Promise<{ token: string; user: User } | Error> => {
+): Promise<{ token: string; user: User } | UserNotFound | InvalidPassword> => {
   const user = await db.getUserByEmail(email);
-  if (!user) return new Error("User doesn't exist");
+  if (user instanceof UserNotFound) return user;
 
   const isValid = await bcrypt.compare(password, user.password_hash);
-  if (!isValid) return Error("Password is incorrect");
+  if (!isValid) return new InvalidPassword();
 
   const { password_hash: _, ...rest } = user;
 
@@ -31,9 +32,9 @@ const register = async ({
   email: string;
   password: string;
   timezone: number;
-}): Promise<{ token: string; user: User } | Error> => {
+}): Promise<{ token: string; user: User } | EmailExists> => {
   const checkExisting = await db.getUserByEmail(email);
-  if (checkExisting) return new Error("This email already exists");
+  if (checkExisting) return new EmailExists(email);
 
   const password_hash = await bcrypt.hash(password, SALT_ROUNDS);
   const new_user = await db.createUser({

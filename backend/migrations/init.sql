@@ -26,5 +26,6 @@ create table if not exists api_key (
   value char(64) primary key,
   user_id integer not null references users(user_id),
   editor Editor,
-  machine_id integer references machine(machine_id)
+  machine_id integer references machine(machine_id),
+  metadata_set boolean default false
 );

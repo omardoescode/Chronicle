@@ -1,4 +1,4 @@
-import * as db from "@/db/api";
+import * as db from "./db";
 import crypto from "node:crypto";
 
 const attempts = 3;

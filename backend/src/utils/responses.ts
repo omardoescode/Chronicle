@@ -8,6 +8,6 @@ export function SuccessResponse<T>(data: T): AppResponse<T> {
   return { success: true, data, errors: [] };
 }
 
-export function ErrorResponse<T>(errors: string[]): AppResponse<T> {
+export function ErrorResponse<T = never>(errors: string[]): AppResponse<T> {
   return { success: false, errors };
 }

@@ -1,5 +1,5 @@
-import { ApiKey, Editor } from "@/validation/api";
-import db from ".";
+import { ApiKey, Editor } from "./validation.js";
+import db from "@/db";
 
 const createAPIKey = (api_key: ApiKey, user_id: number): Promise<boolean> =>
   db
