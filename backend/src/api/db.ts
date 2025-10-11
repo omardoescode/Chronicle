@@ -2,6 +2,7 @@ import { UserNotFound } from "@/auth/errors.js";
 import { ApiMetadataAlreadySet, ApiNotFound } from "./errors.js";
 import { ApiKey, Editor } from "./validation.js";
 import db from "@/db";
+import { User } from "@/auth/validation.js";
 
 const createAPIKey = (api_key: ApiKey, user_id: number): Promise<boolean> =>
   db
@@ -58,4 +59,32 @@ const setAPIMetadata = async (
     if (err) throw err; // an unknown error, throw, don't return
   }
 };
-export { createAPIKey, setAPIMetadata };
+
+const getUserByApi = async (api: ApiKey): Promise<User | ApiNotFound> => {
+  const keyRes = await db.query({
+    text: "SELECT user_id FROM api_key WHERE value = $1 FOR UPDATE",
+    values: [api],
+  });
+
+  if (keyRes.rowCount === 0) throw new ApiNotFound();
+
+  const user_id = keyRes.rows[0].user_id;
+
+  const userRes = await db.query({
+    text: "select name, email from users where user_id = $1",
+    values: [user_id],
+  });
+
+  if (userRes.rowCount === 0) throw new ApiNotFound();
+  const { name, email } = userRes.rows[0];
+
+  const user: User = {
+    user_id,
+    name,
+    email,
+  };
+
+  return user;
+};
+
+export { createAPIKey, setAPIMetadata, getUserByApi };

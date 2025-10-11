@@ -12,6 +12,8 @@ import { type User } from "./auth/validation";
 import { authorized } from "./auth/middleware";
 import { AppError } from "./utils/error";
 import { ApiKey, Editor } from "./api/validation";
+import { withApi } from "./api/middleware";
+import { ProjectSession } from "./heartbeat/validation";
 
 export const graphql = {
   Query: {
@@ -63,6 +65,14 @@ export const graphql = {
       if (res instanceof AppError) return errToResponse(res);
       return SuccessResponse({ api_key });
     },
+    heartbeat: withApi(
+      async (
+        user: User,
+        session: ProjectSession
+      ): Promise<AppResponse<{ user: User; session: ProjectSession }>> => {
+        return SuccessResponse({ session, user });
+      }
+    ),
   },
 };
 

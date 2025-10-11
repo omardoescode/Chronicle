@@ -4,7 +4,7 @@ import { User, UserSchema } from "./validation";
 import { getContext } from "@getcronit/pylon";
 import { InvalidToken, UnauthorizedUser } from "./errors";
 
-type Tail<T extends any[]> = T extends [any, ...infer R] ? R : never;
+type Tail<T extends unknown[]> = T extends [unknown, ...infer R] ? R : never;
 
 export function authorized<T>(
   fn: (user: User, ...args) => Promise<AppResponse<T>>
@@ -26,7 +26,8 @@ export function authorized<T>(
       const data = UserSchema.parse(payload);
       // Spread user into original fn
       return await fn(data, ...args);
-    } catch (_) {
+    } catch (err) {
+      console.error(err);
       return errToResponse(new InvalidToken());
     }
   };

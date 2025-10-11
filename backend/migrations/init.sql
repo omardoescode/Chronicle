@@ -81,7 +81,7 @@ create table if not exists file_segments (
   unique (file_id, start_time, end_time),
 
   -- Metadata
-  segment_type SegmentType,
+  segment_type SegmentType not null,
   human_line_changes integer,
   ai_line_changes integer,
   editor Editor,

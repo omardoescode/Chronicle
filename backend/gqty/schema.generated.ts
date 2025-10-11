@@ -50,6 +50,33 @@ export enum EditorInput {
   vscode = "vscode",
 }
 
+export interface File_sessionsInput {
+  file_path: Scalars["String"]["input"];
+  renames?: InputMaybe<Array<RenamesInput>>;
+  segments: Array<SegmentsInput>;
+}
+
+export interface RenamesInput {
+  lang?: InputMaybe<Scalars["String"]["input"]>;
+  new_file_path: Scalars["String"]["input"];
+  old_file_path: Scalars["String"]["input"];
+  timestamp: Scalars["Any"]["input"];
+}
+
+export interface SegmentsInput {
+  ai_line_changes?: InputMaybe<Scalars["Number"]["input"]>;
+  end_time: Scalars["Any"]["input"];
+  file_path: Scalars["String"]["input"];
+  human_line_changes?: InputMaybe<Scalars["Number"]["input"]>;
+  segment_type: Scalars["Any"]["input"];
+  start_time: Scalars["Any"]["input"];
+}
+
+export interface SessionInput {
+  file_sessions: Array<File_sessionsInput>;
+  project_path?: InputMaybe<Scalars["String"]["input"]>;
+}
+
 export const scalarsEnumsHash: ScalarsEnumsHash = {
   Any: true,
   Boolean: true,
@@ -87,6 +114,12 @@ export const generatedSchema = {
     errors: { __type: "[String!]!" },
     success: { __type: "Boolean!" },
   },
+  AppResponse_4: {
+    __typename: { __type: "String!" },
+    data: { __type: "Data_4" },
+    errors: { __type: "[String!]!" },
+    success: { __type: "Boolean!" },
+  },
   Data: {
     __typename: { __type: "String!" },
     email: { __type: "String!" },
@@ -104,6 +137,61 @@ export const generatedSchema = {
     user: { __type: "User!" },
   },
   Data_3: { __typename: { __type: "String!" }, api_key: { __type: "String!" } },
+  Data_4: {
+    __typename: { __type: "String!" },
+    session: { __type: "Session!" },
+    user: { __type: "User!" },
+  },
+  File_sessions: {
+    __typename: { __type: "String!" },
+    file_path: { __type: "String!" },
+    renames: { __type: "[Renames!]" },
+    segments: { __type: "[Segments!]!" },
+  },
+  File_sessionsInput: {
+    file_path: { __type: "String!" },
+    renames: { __type: "[RenamesInput!]" },
+    segments: { __type: "[SegmentsInput!]!" },
+  },
+  Renames: {
+    __typename: { __type: "String!" },
+    lang: { __type: "String" },
+    new_file_path: { __type: "String!" },
+    old_file_path: { __type: "String!" },
+    timestamp: { __type: "Any!" },
+  },
+  RenamesInput: {
+    lang: { __type: "String" },
+    new_file_path: { __type: "String!" },
+    old_file_path: { __type: "String!" },
+    timestamp: { __type: "Any!" },
+  },
+  Segments: {
+    __typename: { __type: "String!" },
+    ai_line_changes: { __type: "Number" },
+    end_time: { __type: "Any!" },
+    file_path: { __type: "String!" },
+    human_line_changes: { __type: "Number" },
+    segment_type: { __type: "Any!" },
+    start_time: { __type: "Any!" },
+  },
+  SegmentsInput: {
+    ai_line_changes: { __type: "Number" },
+    end_time: { __type: "Any!" },
+    file_path: { __type: "String!" },
+    human_line_changes: { __type: "Number" },
+    segment_type: { __type: "Any!" },
+    start_time: { __type: "Any!" },
+  },
+  Session: {
+    __typename: { __type: "String!" },
+    file_sessions: { __type: "[File_sessions!]!" },
+    project_path: { __type: "String" },
+  },
+  SessionInput: {
+    file_sessions: { __type: "[File_sessionsInput!]!" },
+    project_path: { __type: "String" },
+  },
   SetApiMetadata: {
     __typename: { __type: "String!" },
     errors: { __type: "[String!]!" },
@@ -118,6 +206,10 @@ export const generatedSchema = {
   mutation: {
     __typename: { __type: "String!" },
     generateApiKey: { __type: "AppResponse_3!" },
+    heartbeat: {
+      __type: "AppResponse_4!",
+      __args: { session: "SessionInput!" },
+    },
     login: {
       __type: "AppResponse_1!",
       __args: { email: "String!", password: "String!" },
@@ -176,6 +268,13 @@ export interface AppResponse_3 {
   success: ScalarsEnums["Boolean"];
 }
 
+export interface AppResponse_4 {
+  __typename?: "AppResponse_4";
+  data?: Maybe<Data_4>;
+  errors: Array<ScalarsEnums["String"]>;
+  success: ScalarsEnums["Boolean"];
+}
+
 export interface Data {
   __typename?: "Data";
   email: ScalarsEnums["String"];
@@ -200,6 +299,43 @@ export interface Data_3 {
   api_key: ScalarsEnums["String"];
 }
 
+export interface Data_4 {
+  __typename?: "Data_4";
+  session: Session;
+  user: User;
+}
+
+export interface File_sessions {
+  __typename?: "File_sessions";
+  file_path: ScalarsEnums["String"];
+  renames?: Maybe<Array<Renames>>;
+  segments: Array<Segments>;
+}
+
+export interface Renames {
+  __typename?: "Renames";
+  lang?: Maybe<ScalarsEnums["String"]>;
+  new_file_path: ScalarsEnums["String"];
+  old_file_path: ScalarsEnums["String"];
+  timestamp: ScalarsEnums["Any"];
+}
+
+export interface Segments {
+  __typename?: "Segments";
+  ai_line_changes?: Maybe<ScalarsEnums["Number"]>;
+  end_time: ScalarsEnums["Any"];
+  file_path: ScalarsEnums["String"];
+  human_line_changes?: Maybe<ScalarsEnums["Number"]>;
+  segment_type: ScalarsEnums["Any"];
+  start_time: ScalarsEnums["Any"];
+}
+
+export interface Session {
+  __typename?: "Session";
+  file_sessions: Array<File_sessions>;
+  project_path?: Maybe<ScalarsEnums["String"]>;
+}
+
 export interface SetApiMetadata {
   __typename?: "SetApiMetadata";
   errors: Array<ScalarsEnums["String"]>;
@@ -216,6 +352,7 @@ export interface User {
 export interface Mutation {
   __typename?: "Mutation";
   generateApiKey: AppResponse_3;
+  heartbeat: (args: { session: SessionInput }) => AppResponse_4;
   login: (args: {
     email: ScalarsEnums["String"];
     password: ScalarsEnums["String"];
