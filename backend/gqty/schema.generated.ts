@@ -52,7 +52,7 @@ export enum EditorInput {
 
 export interface File_sessionsInput {
   file_path: Scalars["String"]["input"];
-  renames?: InputMaybe<Array<RenamesInput>>;
+  renames: Array<RenamesInput>;
   segments: Array<SegmentsInput>;
 }
 
@@ -145,12 +145,12 @@ export const generatedSchema = {
   File_sessions: {
     __typename: { __type: "String!" },
     file_path: { __type: "String!" },
-    renames: { __type: "[Renames!]" },
+    renames: { __type: "[Renames!]!" },
     segments: { __type: "[Segments!]!" },
   },
   File_sessionsInput: {
     file_path: { __type: "String!" },
-    renames: { __type: "[RenamesInput!]" },
+    renames: { __type: "[RenamesInput!]!" },
     segments: { __type: "[SegmentsInput!]!" },
   },
   Renames: {
@@ -308,7 +308,7 @@ export interface Data_4 {
 export interface File_sessions {
   __typename?: "File_sessions";
   file_path: ScalarsEnums["String"];
-  renames?: Maybe<Array<Renames>>;
+  renames: Array<Renames>;
   segments: Array<Segments>;
 }
 

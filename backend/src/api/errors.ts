@@ -20,3 +20,11 @@ export class ApiMetadataAlreadySet extends AppError {
     super("Metadata already set for this API key", { code: "METADATA_EXISTS" });
   }
 }
+
+export class ApiMetadataNotSet extends AppError {
+  constructor() {
+    super("Metadata are not set for this API key", {
+      code: "METADATA_NO_EXISTS",
+    });
+  }
+}

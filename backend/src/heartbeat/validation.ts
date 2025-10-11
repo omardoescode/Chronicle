@@ -36,7 +36,7 @@ export const ProjectSessionSchema = z.object({
     z.object({
       file_path: z.string(),
       segments: z.array(SegmentSchema),
-      renames: z.array(FileRenameSchema).optional(),
+      renames: z.array(FileRenameSchema),
     })
   ),
 });
