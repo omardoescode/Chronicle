@@ -1,7 +1,10 @@
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'editor') THEN
-    CREATE TYPE Editor AS ENUM ('vscode', 'unknown');
+    CREATE TYPE editor AS ENUM ('vscode', 'unknown');
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'lang') THEN
+    CREATE TYPE lang AS ENUM ('abap', 'bat', 'bibtex', 'clojure', 'coffeescript', 'c', 'cpp', 'csharp', 'dockercompose', 'css', 'cuda-cpp', 'd', 'dart', 'diff', 'dockerfile', 'erlang', 'fsharp',  'go', 'groovy', 'handlebars', 'haml', 'haskell', 'html', 'ini', 'java', 'javascript', 'javascriptreact', 'json', 'jsonc', 'julia', 'latex', 'less', 'lua', 'makefile', 'markdown', 'objective-c', 'objective-cpp', 'ocaml', 'pascal', 'perl', 'perl6', 'php', 'plaintext', 'powershell', 'jade', 'pug', 'python', 'r', 'razor', 'ruby', 'rust', 'scss', 'sass', 'shaderlab', 'shellscript', 'slim', 'sql', 'stylus', 'svelte', 'swift', 'typescript', 'typescriptreact', 'tex', 'vb', 'vue', 'vue-html', 'xml', 'xsl', 'yaml');
   END IF;
 END$$;
 
@@ -28,4 +31,22 @@ create table if not exists api_key (
   editor Editor,
   machine_id integer references machine(machine_id),
   metadata_set boolean default false
+);
+
+create table if not exists projects (
+  project_path varchar(500),
+  project_name text generated always as (regexp_replace(project_path, '^.*[\\/]', '')) stored,
+  user_id integer references users(user_id),
+  started_at timestamp not null default now(),
+  primary key (user_id, project_path)
+);
+
+create table if not exists project_files (
+  user_id integer references users(user_id),
+  project_path varchar(255),
+  file_path varchar(500), -- This is the path relative to the project path
+  file_name text generated always as (regexp_replace(file_path, '^.*[\\/]', '')) stored,
+  lang lang,
+  primary key (user_id, project_path, file_path),
+  foreign key (user_id, project_path) references projects(user_id, project_path) on delete cascade
 );
