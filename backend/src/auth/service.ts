@@ -34,7 +34,7 @@ const register = async ({
   timezone: number;
 }): Promise<{ token: string; user: User } | EmailExists> => {
   const checkExisting = await db.getUserByEmail(email);
-  if (checkExisting) return new EmailExists(email);
+  if (!(checkExisting instanceof UserNotFound)) return new EmailExists(email);
 
   const password_hash = await bcrypt.hash(password, SALT_ROUNDS);
   const new_user = await db.createUser({
