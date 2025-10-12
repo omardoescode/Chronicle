@@ -13,7 +13,11 @@ import { authorized } from "./auth/middleware";
 import { AppError } from "./utils/error";
 import { ApiKey, Editor } from "./api/validation";
 import { withApi } from "./api/middleware";
-import { ProjectSession } from "./heartbeat/validation";
+import {
+  ProjectSessionInput,
+  ProjectSessionSchema,
+} from "./heartbeat/validation";
+import * as heartbeat from "./heartbeat/service";
 
 export const graphql = {
   Query: {
@@ -63,14 +67,17 @@ export const graphql = {
     ) {
       const res = await api.setApiMetadata(api_key, editor, machine_name, os);
       if (res instanceof AppError) return errToResponse(res);
-      return SuccessResponse({ api_key });
+      return SuccessResponse<void>();
     },
     heartbeat: withApi(
-      async (
-        user: User,
-        session: ProjectSession
-      ): Promise<AppResponse<{ user: User; session: ProjectSession }>> => {
-        return SuccessResponse({ session, user });
+      async (user: User, api: ApiKey, session: ProjectSessionInput) => {
+        const data = await heartbeat.heartbeat(
+          user,
+          api,
+          ProjectSessionSchema.parse(session)
+        );
+        if (data instanceof AppError) return errToResponse(data);
+        return SuccessResponse<void>();
       }
     ),
   },

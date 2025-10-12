@@ -6,6 +6,7 @@ import {
 import { ApiKey, Editor } from "./validation.js";
 import db from "@/db";
 import { User } from "@/auth/validation.js";
+import { ApiMetadata } from "./types.js";
 
 const createAPIKey = (api_key: ApiKey, user_id: number): Promise<boolean> =>
   db
@@ -91,4 +92,34 @@ const getUserByApi = async (api: ApiKey): Promise<User | ApiNotFound> => {
   return user;
 };
 
-export { createAPIKey, setAPIMetadata, getUserByApi };
+async function getApiMetadata(
+  api_key: ApiKey
+): Promise<ApiMetadata | ApiNotFound | ApiMetadataNotSet> {
+  const result = await db.query({
+    text: `
+select a.user_id user_id, a.editor editor, a.machine_id machine_id, a.metadata_set metadata_set, m.name machine_name, m.os os
+from api_key a left join machine m on a.machine_id = m.machine_id 
+where value = $1`,
+    values: [api_key],
+  });
+
+  if (result.rows.length === 0) return new ApiNotFound();
+
+  const { editor, machine_id, metadata_set, machine_name, os, user_id } =
+    result.rows[0];
+
+  if (!metadata_set) return new ApiMetadataNotSet();
+
+  return {
+    value: api_key,
+    user_id,
+    editor,
+    machine: {
+      machine_id,
+      name: machine_name,
+      os,
+    },
+  };
+}
+
+export { createAPIKey, setAPIMetadata, getUserByApi, getApiMetadata };

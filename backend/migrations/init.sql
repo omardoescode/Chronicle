@@ -20,9 +20,9 @@ create table if not exists users (
   timezone integer check (timezone between -12 and 14)
 );
 
-create index idx_users_active on users(user_id) where not is_deleted; -- for active non deleted users
+create index if not exists idx_users_active on users(user_id) where not is_deleted; -- for active non deleted users
 
-create table if not exists machine(
+create table if not exists machine (
   machine_id serial primary key,
   user_id integer not null references users(user_id),
   name varchar(100),
@@ -48,7 +48,7 @@ create table if not exists projects (
 );
 
 create table if not exists project_files (
-  file_id integer primary key,
+  file_id serial primary key,
 
   user_id integer references users(user_id),
   project_path varchar(255),
@@ -58,15 +58,8 @@ create table if not exists project_files (
   file_name text generated always as (regexp_replace(file_path, '^.*[\\/]', '')) stored,
   lang Lang,
 
-  -- File rename setup
-  old_file_path varchar(500), 
-  superseded_by integer references project_files (file_id),
-  deleted_at timestamp
+  constraint unique_file unique (user_id, project_path, file_path) include (file_id)
 );
-
-CREATE UNIQUE INDEX if not exists unique_active_file_path
-ON project_files (user_id, project_path, file_path)
-WHERE deleted_at IS NULL AND superseded_by IS NULL;
 
 create table if not exists file_segments (
   segment_id serial primary key,
@@ -81,7 +74,7 @@ create table if not exists file_segments (
   unique (file_id, start_time, end_time),
 
   -- Metadata
-  segment_type SegmentType not null,
+  segment_type SegmentType,
   human_line_changes integer,
   ai_line_changes integer,
   editor Editor,
