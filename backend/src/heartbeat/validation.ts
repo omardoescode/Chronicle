@@ -14,8 +14,8 @@ export const SegmentSchema = z.object({
 
   // Segment metadata
   segment_type: SegmentTypeSchema,
-  human_line_changes: z.number().int().nonnegative().default(0),
-  ai_line_changes: z.number().int().nonnegative().default(0),
+  human_line_changes: z.number().int().default(0),
+  ai_line_changes: z.number().int().default(0),
 });
 
 export const ProjectSessionSchema = z.object({
