@@ -75,8 +75,10 @@ create table if not exists file_segments (
 
   -- Metadata
   segment_type SegmentType,
-  human_line_changes integer,
-  ai_line_changes integer,
+  human_line_additions integer,
+  human_line_deletions integer,
+  ai_line_additions integer,
+  ai_line_deletions integer,
   editor Editor,
   machine_id integer references machine(machine_id)
 );

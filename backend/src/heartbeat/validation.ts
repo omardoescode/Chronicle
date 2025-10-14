@@ -7,6 +7,11 @@ export enum SegmentType {
 }
 export const SegmentTypeSchema = z.enum(Object.values(SegmentType));
 
+export const LineChangesSchema = z.object({
+  additions: z.number().int().nonnegative(),
+  deletions: z.number().int().nonnegative(),
+});
+
 export const SegmentSchema = z.object({
   // Time range
   start_time: z.coerce.date(),
@@ -14,8 +19,8 @@ export const SegmentSchema = z.object({
 
   // Segment metadata
   segment_type: SegmentTypeSchema,
-  human_line_changes: z.number().int().default(0),
-  ai_line_changes: z.number().int().default(0),
+  human_line_changes: LineChangesSchema,
+  ai_line_changes: LineChangesSchema,
 });
 
 export const ProjectSessionSchema = z.object({
