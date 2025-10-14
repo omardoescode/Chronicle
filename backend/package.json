@@ -6,7 +6,8 @@
   "description": "Generated with `npm create pylon`",
   "scripts": {
     "dev": "pylon dev -c \"bun run .pylon/index.js\" --client --client-port 3000 --client-path gqty/index.ts",
-    "build": "pylon build"
+    "build": "pylon build",
+    "init_db": "bun run src/init_db.ts"
   },
   "dependencies": {
     "@getcronit/pylon": "^2.0.0",
