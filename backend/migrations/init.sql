@@ -80,5 +80,6 @@ create table if not exists file_segments (
   ai_line_additions integer default 0 not null,
   ai_line_deletions integer default 0 not null,
   editor Editor,
-  machine_id integer references machine(machine_id)
+  machine_id integer references machine(machine_id),
+  git_branch varchar(255)
 );

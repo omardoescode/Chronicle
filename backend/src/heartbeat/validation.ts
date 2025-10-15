@@ -21,6 +21,7 @@ export const SegmentSchema = z.object({
   segment_type: SegmentTypeSchema,
   human_line_changes: LineChangesSchema,
   ai_line_changes: LineChangesSchema,
+  git_branch: z.string().optional(),
 });
 
 export const ProjectSessionSchema = z.object({

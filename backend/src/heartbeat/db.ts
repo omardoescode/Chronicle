@@ -70,7 +70,7 @@ async function upsertFileSegments(
 
   const { file_id } = file_id_res.rows[0];
 
-  const placeholderGenerator = makePlaceholderGenerator(10);
+  const placeholderGenerator = makePlaceholderGenerator(11);
   const placeholders: string[] = [];
   const values: unknown[] = [];
 
@@ -84,6 +84,7 @@ async function upsertFileSegments(
         deletions: human_deletions,
       },
       segment_type,
+      git_branch,
     }) => {
       placeholders.push(placeholderGenerator());
       values.push(
@@ -96,14 +97,15 @@ async function upsertFileSegments(
         human_deletions,
         segment_type,
         editor,
-        machine_id
+        machine_id,
+        git_branch || null
       );
     }
   );
 
   const placeholders_str = placeholders.join(", ");
 
-  const text = `insert into file_segments (file_id, start_time, end_time, ai_line_additions, ai_line_deletions, human_line_additions, human_line_deletions, segment_type, editor, machine_id) values ${placeholders_str} on conflict do nothing`;
+  const text = `insert into file_segments (file_id, start_time, end_time, ai_line_additions, ai_line_deletions, human_line_additions, human_line_deletions, segment_type, editor, machine_id, git_branch) values ${placeholders_str} on conflict (file_id, start_time, end_time) do nothing`;
 
   await db.query({ text, values });
 }
