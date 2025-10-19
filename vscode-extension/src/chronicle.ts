@@ -1,6 +1,7 @@
 import * as vscode from 'vscode'
 import { apiKeyInvalid } from './utils'
 import { APIRequester } from './api_requester'
+import { ChronicleConfig } from './configs'
 import {
   ApiMetadataRequestBody,
   HeartbeatFile,
@@ -13,6 +14,7 @@ import {
 
 export class Chronicle {
   private apiKey: string = ''
+  private config: ChronicleConfig | undefined = undefined
   private disposable: vscode.Disposable | undefined = undefined
   private apiRequester: APIRequester | undefined = undefined
   private readonly heartbeatInterval = 0.25 * 60 * 1000 // 2 minutes
@@ -28,23 +30,21 @@ export class Chronicle {
   private isDebugging: boolean = false
   private isAIEditing: boolean = false
 
-  constructor() {}
+  constructor() {
+    this.config = new ChronicleConfig()
+  }
 
   public async initialize() {
     await this.checkForApiKey()
-    this.apiRequester = APIRequester.getInstance(this.apiKey)
-    this.sendApiMetadata()
     this.checkForOpenFile()
     this.setupEventListeners()
   }
 
   private async checkForApiKey(): Promise<void> {
-    const storedKey = await vscode.workspace
-      .getConfiguration('chronicle')
-      .get<string>('apiKey')
+    const storedKey = this.config?.getApiKey()
 
     if (storedKey && !apiKeyInvalid(storedKey)) {
-      this.apiKey = storedKey
+      this.setApiKey(storedKey)
       vscode.window.setStatusBarMessage('Chronicle API key loaded')
       return
     } else {
@@ -91,14 +91,14 @@ export class Chronicle {
   }
 
   private async getApiKey(): Promise<string | undefined> {
-    return vscode.workspace.getConfiguration('chronicle').get<string>('apiKey')
+    return this.config?.getApiKey() || this.apiKey
   }
 
   private async setApiKey(key: string) {
-    await vscode.workspace
-      .getConfiguration('chronicle')
-      .update('apiKey', key, vscode.ConfigurationTarget.Workspace)
+    this.config?.setApiKey(key)
     this.apiKey = key
+    this.apiRequester = APIRequester.getInstance(this.apiKey)
+    this.sendApiMetadata()
     vscode.window.setStatusBarMessage('Chronicle API key loaded')
     vscode.window.showInformationMessage('Chronicle API key updated')
   }
@@ -121,6 +121,8 @@ export class Chronicle {
         vscode.window.showErrorMessage(
           'Error sending API metadata: ' + error.message
         )
+
+        await this.promptForApiKey()
       }
     }
   }
