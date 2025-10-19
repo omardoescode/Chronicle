@@ -16,6 +16,7 @@ export class Chronicle {
   private disposable: vscode.Disposable | undefined = undefined
   private apiRequester: APIRequester | undefined = undefined
   private readonly heartbeatInterval = 0.25 * 60 * 1000 // 2 minutes
+  private readonly editingInterval = 2 * 60 * 1000 // 2 minutes
   private lastHeartbeat: number = 0
   private heartbeatFileSegments: HeartbeatFileSegments = {}
   private linesInFiles: Lines = {}
@@ -23,6 +24,7 @@ export class Chronicle {
   private focusedFile: string | undefined = undefined
   private focusedFileLang: string | undefined = undefined
   private focusedFileAt: number = 0
+  private lastEditAt: number = 0
   private isDebugging: boolean = false
   private isAIEditing: boolean = false
 
@@ -162,13 +164,20 @@ export class Chronicle {
   }
 
   private onChangeTextDocument(event: vscode.TextDocumentChangeEvent) {
+    if (
+      this.lastEditAt != 0 &&
+      this.lastEditAt < Date.now() - this.editingInterval
+    ) {
+      this.appendFileSegment(new Date(this.lastEditAt))
+      this.focusedFileAt = Date.now()
+    }
+
     this.updateLineNumbers()
+    this.lastEditAt = Date.now()
     // console.log('Document changed:', event.contentChanges)
   }
 
   private async onChangeTab(editor: vscode.TextEditor | undefined) {
-    this.updateLineNumbers()
-
     await this.appendFileSegment()
 
     if (editor) {
@@ -183,7 +192,6 @@ export class Chronicle {
   }
 
   private onSave(document: vscode.TextDocument) {
-    this.updateLineNumbers()
     this.isAIEditing = false
 
     this.appendFileSegment()
@@ -228,7 +236,7 @@ export class Chronicle {
     console.log(this.linesInFiles)
   }
 
-  private async appendFileSegment() {
+  private async appendFileSegment(end_time: Date = new Date()) {
     const doc = vscode.window.activeTextEditor?.document
     if (!doc) return
 
@@ -242,7 +250,7 @@ export class Chronicle {
 
     const segment: HeartbeatSegment = {
       start_time: new Date(this.focusedFileAt).toUTCString(),
-      end_time: new Date().toUTCString(),
+      end_time: end_time.toUTCString(),
       segment_type: this.isAIEditing
         ? 'ai_coding'
         : this.isDebugging
