@@ -4,8 +4,8 @@ import { AppResponse, errToResponse } from "@/utils/responses";
 import { getContext } from "@getcronit/pylon";
 import { ApiKey, ApiKeySchema } from "./validation";
 import { getUserByApi } from "./db";
-import { ApiNotFound } from "./errors";
 import { AppError } from "@/utils/error";
+import { InvalidApi } from "./errors";
 
 export function withApi<TArgs extends unknown[], TReturn>(
   fn: (user: User, api: ApiKey, ...args: TArgs) => Promise<AppResponse<TReturn>>
@@ -15,7 +15,7 @@ export function withApi<TArgs extends unknown[], TReturn>(
     const payload = ctx.req.header("Chronicle-Api-Key");
     if (!payload) return errToResponse(new UnauthorizedUser());
     const parsed = ApiKeySchema.safeParse(payload);
-    if (parsed.error) return errToResponse(new ApiNotFound());
+    if (parsed.error) return errToResponse(new InvalidApi());
     const user = await getUserByApi(parsed.data);
     if (user instanceof AppError) return errToResponse(user);
 

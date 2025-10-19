@@ -28,3 +28,11 @@ export class ApiMetadataNotSet extends AppError {
     });
   }
 }
+
+export class InvalidApi extends AppError {
+  constructor() {
+    super("Invalid API", {
+      code: "INVALID_API",
+    });
+  }
+}
