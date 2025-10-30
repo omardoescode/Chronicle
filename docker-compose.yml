@@ -89,26 +89,49 @@ services:
     networks:
       - mynet
 
-  # flink-jobmanager:
-  #   image: flink:1.18-java11
-  #   hostname: flink-jobmanager
-  #   ports:
-  #     - "8081:8081"
-  #   command: jobmanager
-  #   environment:
-  #     - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
-  #
-  # flink-taskmanager:
-  #   image: flink:1.18-java11
-  #   depends_on:
-  #     - flink-jobmanager
-  #   command: taskmanager
-  #   environment:
-  #     - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
+  jobmanager:
+    build: .
+    ports:
+      - "8081:8081"
+    command: jobmanager
+    volumes:
+      - flink_data:/tmp/
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: jobmanager
+        state.backend: hashmap
+        state.checkpoints.dir: file:///tmp/flink-checkpoints
+        heartbeat.interval: 1000
+        heartbeat.timeout: 5000
+        rest.flamegraph.enabled: true
+        web.backpressure.refresh-interval: 10000
+    networks:
+      - mynet
+
+  taskmanager:
+    build: .
+    depends_on:
+      - jobmanager
+    command: taskmanager
+    volumes:
+      - flink_data:/tmp/
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: jobmanager
+        taskmanager.numberOfTaskSlots: 3
+        state.backend: hashmap
+        state.checkpoints.dir: file:///tmp/flink-checkpoints
+        heartbeat.interval: 1000
+        heartbeat.timeout: 5000
+    networks:
+      - mynet
 
 volumes:
   postgres_data:
   connectors:
+  flink_data:
 
 networks:
   mynet:
