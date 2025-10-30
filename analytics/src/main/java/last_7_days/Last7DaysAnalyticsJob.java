@@ -1,6 +1,7 @@
 package last_7_days;
 
 import java.io.InputStream;
+import java.util.Date;
 import java.util.Properties;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.MapFunction;
@@ -47,9 +48,10 @@ public class Last7DaysAnalyticsJob {
 						}
 
 						// Map to FileSegment
-						return new FileSegment(after.get("segment_id").asInt(), after.get("file_id").asInt(),
-								after.get("start_time").asLong(), after.get("end_time").asLong(),
-								after.get("segment_type").asText(), after.get("human_line_changes").asInt(),
+						Date startTime = new Date(after.get("start_time").asLong());
+						Date endTime = new Date(after.get("end_time").asLong());
+						return new FileSegment(after.get("segment_id").asInt(), after.get("file_id").asInt(), startTime,
+								endTime, after.get("segment_type").asText(), after.get("human_line_changes").asInt(),
 								after.get("ai_line_changes").asInt(), after.get("editor").asText(),
 								after.get("machine_id").asInt());
 					}

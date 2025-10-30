@@ -2,14 +2,15 @@ package models;
 
 import java.io.Serializable;
 import java.util.Objects;
+import java.util.Date;
 
 public class FileSegment implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	private Integer segment_id;
 	private Integer file_id;
-	private Long start_time;
-	private Long end_time;
+	private Date start_time;
+	private Date end_time;
 	private String segment_type;
 	private Integer human_line_changes;
 	private Integer ai_line_changes;
@@ -21,7 +22,7 @@ public class FileSegment implements Serializable {
 	}
 
 	// All-args constructor
-	public FileSegment(Integer segment_id, Integer file_id, Long start_time, Long end_time, String segment_type,
+	public FileSegment(Integer segment_id, Integer file_id, Date start_time, Date end_time, String segment_type,
 			Integer human_line_changes, Integer ai_line_changes, String editor, Integer machine_id) {
 		this.segment_id = segment_id;
 		this.file_id = file_id;
@@ -43,11 +44,11 @@ public class FileSegment implements Serializable {
 		return file_id;
 	}
 
-	public Long getStart_time() {
+	public Date getStart_time() {
 		return start_time;
 	}
 
-	public Long getEnd_time() {
+	public Date getEnd_time() {
 		return end_time;
 	}
 
@@ -80,11 +81,11 @@ public class FileSegment implements Serializable {
 		this.file_id = file_id;
 	}
 
-	public void setStart_time(Long start_time) {
+	public void setStart_time(Date start_time) {
 		this.start_time = start_time;
 	}
 
-	public void setEnd_time(Long end_time) {
+	public void setEnd_time(Date end_time) {
 		this.end_time = end_time;
 	}
 
