@@ -83,5 +83,6 @@ create table if not exists file_segments (
 
 create table if not exists outbox (
   segment_id integer primary key references file_segments(segment_id),
-  processed boolean default false
+  processed boolean default false,
+  created_at timestamp default now() not null
 );
