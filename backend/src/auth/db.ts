@@ -1,12 +1,13 @@
 import { type User, UserWithPasswordHash } from "./validation";
-import db from "@/db";
 import { Int } from "@getcronit/pylon";
 import { UserNotFound } from "./errors";
+import { PoolClient } from "pg";
 
 const getUserByEmail = async (
+  client: PoolClient,
   email: string
 ): Promise<UserWithPasswordHash | UserNotFound> => {
-  const users = await db.query({
+  const users = await client.query({
     text: "select user_id, name, password_hash from users where email = $1 and is_deleted = false",
     values: [email],
   });
@@ -17,14 +18,17 @@ const getUserByEmail = async (
   return { ...user, email } as UserWithPasswordHash;
 };
 
-const createUser = async (data: {
-  name: string;
-  email: string;
-  password_hash: string;
-  timezone: Int;
-}): Promise<User> => {
+const createUser = async (
+  client: PoolClient,
+  data: {
+    name: string;
+    email: string;
+    password_hash: string;
+    timezone: Int;
+  }
+): Promise<User> => {
   const { name, email, password_hash, timezone } = data;
-  const new_user_id = await db.query({
+  const new_user_id = await client.query({
     text: "insert into users(name, email, password_hash, timezone) values ($1, $2, $3, $4) returning user_id",
     values: [name, email, password_hash, timezone],
   });

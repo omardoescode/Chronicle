@@ -74,9 +74,14 @@ create table if not exists file_segments (
   unique (file_id, start_time, end_time),
 
   -- Metadata
-  segment_type SegmentType,
-  human_line_changes integer,
-  ai_line_changes integer,
-  editor Editor,
-  machine_id integer references machine(machine_id)
+  segment_type SegmentType not null,
+  human_line_changes integer default 0 not null,
+  ai_line_changes integer default 0 not null,
+  editor Editor not null,
+  machine_id integer references machine(machine_id) not null
+);
+
+create table if not exists outbox (
+  segment_id integer primary key references file_segments(segment_id),
+  processed boolean default false
 );

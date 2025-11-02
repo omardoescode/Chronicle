@@ -1,5 +1,5 @@
 import fs from "fs";
-import db from "@/db";
+import pool from "@/pool";
 import path from "path";
 
 const dir = path.resolve("./migrations");
@@ -11,7 +11,7 @@ const files = fs
 for (const file of files) {
   console.log(`Processing file: ${file}`);
   const sql = fs.readFileSync(path.join(dir, file), "utf-8");
-  await db.query(sql);
+  await pool.query(sql);
   console.log(`Ended Processing file: ${file}`);
 }
 

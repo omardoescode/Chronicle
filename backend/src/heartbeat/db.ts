@@ -1,15 +1,16 @@
-import db from "@/db";
 import { Project } from "./types";
 import assert from "assert";
 import { type Segment } from "./validation";
 import { Editor } from "@/api/validation";
 import { makePlaceholderGenerator } from "@/utils/db_helpers";
+import { PoolClient } from "pg";
 
 async function upsertProject(
+  client: PoolClient,
   user_id: number,
   project_path: string
 ): Promise<Project> {
-  const result = await db.query({
+  const result = await client.query({
     text: `
       INSERT INTO projects(user_id, project_path, started_at) 
       VALUES ($1, $2, NOW()) 
@@ -24,6 +25,7 @@ async function upsertProject(
 }
 
 async function upsertFiles(
+  client: PoolClient,
   user_id: number,
   project_path: string,
   files: { path: string; lang: string }[]
@@ -42,13 +44,14 @@ async function upsertFiles(
   const placeholder_str = placeholders.join(", ");
 
   const text = `insert into project_files (user_id, project_path, file_path, lang) values ${placeholder_str}  on conflict (user_id, project_path, file_path) do update set lang = excluded.lang`;
-  await db.query({
+  await client.query({
     text,
     values,
   });
 }
 
 async function upsertFileSegments(
+  client: PoolClient,
   user_id: number,
   project_path: string,
   file_path: string,
@@ -57,7 +60,7 @@ async function upsertFileSegments(
   machine_id: number
 ): Promise<void> {
   // Get file_id
-  const file_id_res = await db.query({
+  const file_id_res = await client.query({
     text: "select file_id from project_files where user_id = $1 and project_path = $2 and file_path = $3",
     values: [user_id, project_path, file_path],
   });
@@ -100,7 +103,7 @@ async function upsertFileSegments(
 
   const text = `insert into file_segments (file_id, start_time, end_time, ai_line_changes, human_line_changes, segment_type, editor, machine_id) values ${placeholders_str} on conflict do nothing`;
 
-  await db.query({ text, values });
+  await client.query({ text, values });
 }
 
 export { upsertProject, upsertFiles, upsertFileSegments };
