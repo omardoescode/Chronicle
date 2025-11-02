@@ -6,6 +6,7 @@ import { ApiKey, ApiKeySchema } from "./validation";
 import { getUserByApi } from "./db";
 import { AppError } from "@/utils/error";
 import { InvalidApi } from "./errors";
+import pool from "@/pool";
 
 export function withApi<TArgs extends unknown[], TReturn>(
   fn: (user: User, api: ApiKey, ...args: TArgs) => Promise<AppResponse<TReturn>>
@@ -16,8 +17,13 @@ export function withApi<TArgs extends unknown[], TReturn>(
     if (!payload) return errToResponse(new UnauthorizedUser());
     const parsed = ApiKeySchema.safeParse(payload);
     if (parsed.error) return errToResponse(new InvalidApi());
-    const user = await getUserByApi(parsed.data);
-    if (user instanceof AppError) return errToResponse(user);
+
+    const client = await pool.connect();
+    // TODO: Handle this for failure
+    const user = await getUserByApi(client, parsed.data);
+    console.log(user);
+    client.release();
+    if (user instanceof AppError) return errToResponse(user); // NOTE: ! this doens't feel right?
 
     return await fn(user, parsed.data, ...args);
   };

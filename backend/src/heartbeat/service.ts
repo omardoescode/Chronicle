@@ -30,7 +30,7 @@ const heartbeat = async (
       machine: { machine_id },
     } = api_metadata;
 
-    await Promise.all(
+    const ids = await Promise.all(
       session.files.map(({ file_path, segments }) =>
         db.upsertFileSegments(
           client,
@@ -42,7 +42,9 @@ const heartbeat = async (
           machine_id
         )
       )
-    );
+    ).then((values) => values.flatMap((x) => x));
+
+    await db.insertOutboxSegments(client, ids);
     client.query("commit");
   } catch (err) {
     client.query("rollback");
@@ -51,4 +53,5 @@ const heartbeat = async (
     client.release();
   }
 };
+
 export { heartbeat };

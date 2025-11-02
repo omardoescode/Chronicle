@@ -58,7 +58,7 @@ async function upsertFileSegments(
   segments: Segment[],
   editor: Editor,
   machine_id: number
-): Promise<void> {
+): Promise<number[]> {
   // Get file_id
   const file_id_res = await client.query({
     text: "select file_id from project_files where user_id = $1 and project_path = $2 and file_path = $3",
@@ -68,7 +68,7 @@ async function upsertFileSegments(
     console.warn(
       `Skipping upserting segments for file ${file_path}. file_id not found`
     );
-    return;
+    return [];
   }
 
   const { file_id } = file_id_res.rows[0];
@@ -101,9 +101,41 @@ async function upsertFileSegments(
 
   const placeholders_str = placeholders.join(", ");
 
-  const text = `insert into file_segments (file_id, start_time, end_time, ai_line_changes, human_line_changes, segment_type, editor, machine_id) values ${placeholders_str} on conflict do nothing`;
+  const text = `insert into file_segments (file_id, start_time, end_time, ai_line_changes, human_line_changes, segment_type, editor, machine_id) values ${placeholders_str} on conflict do nothing returning segment_id;`;
 
-  await client.query({ text, values });
+  const result = await client.query({ text, values });
+
+  const segment_ids = result.rows.map((r) => r.segment_id);
+  return segment_ids;
 }
 
-export { upsertProject, upsertFiles, upsertFileSegments };
+const insertOutboxSegments = async (
+  client: PoolClient,
+  segment_ids: number[]
+) => {
+  if (segment_ids.length > 0) {
+    const outboxPlaceholderGen = makePlaceholderGenerator(1);
+    const outboxPlaceholders: string[] = [];
+    const outboxValues: unknown[] = [];
+
+    segment_ids.forEach((segment_id) => {
+      outboxPlaceholders.push(outboxPlaceholderGen());
+      outboxValues.push(segment_id);
+    });
+
+    const outboxPlaceholderStr = outboxPlaceholders.join(", ");
+
+    const insertOutbox = `
+      INSERT INTO outbox (segment_id)
+      VALUES ${outboxPlaceholderStr}
+      ON CONFLICT DO NOTHING;
+    `;
+
+    await client.query({
+      text: insertOutbox,
+      values: outboxValues,
+    });
+  }
+};
+
+export { upsertProject, upsertFiles, upsertFileSegments, insertOutboxSegments };
