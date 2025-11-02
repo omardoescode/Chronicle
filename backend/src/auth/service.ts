@@ -16,7 +16,7 @@ const login = async (
 > => {
   const client = await pool.connect();
   try {
-    client.query("begin transaction");
+    await client.query("begin transaction");
     const user = await db.getUserByEmail(client, email);
     if (user instanceof UserNotFound) return user;
 
@@ -26,10 +26,10 @@ const login = async (
     const { password_hash: _, ...rest } = user;
 
     const token = await generateToken(rest, "7d");
-    client.query("commit");
+    await client.query("commit");
     return { token, user: rest };
   } catch (err) {
-    client.query("rollback");
+    await client.query("rollback");
     console.error(err);
     return new DBError();
   } finally {
@@ -50,10 +50,10 @@ const register = async ({
 }): Promise<{ token: string; user: User } | EmailExists | DBError> => {
   const client = await pool.connect();
   try {
-    client.query("begin transaction");
+    await client.query("begin transaction");
     const checkExisting = await db.getUserByEmail(client, email);
     if (!(checkExisting instanceof UserNotFound)) {
-      client.query("commit");
+      await client.query("commit");
       return new EmailExists(email);
     }
 
@@ -67,10 +67,10 @@ const register = async ({
 
     const token = await generateToken(new_user, "7d");
 
-    client.query("commit");
+    await client.query("commit");
     return { token, user: new_user };
   } catch (err) {
-    client.query("rollback");
+    await client.query("rollback");
     console.error(err);
     return new DBError();
   } finally {

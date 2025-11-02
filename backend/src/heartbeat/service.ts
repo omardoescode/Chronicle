@@ -13,7 +13,7 @@ const heartbeat = async (
 ): Promise<void | AppError> => {
   const client = await pool.connect();
   try {
-    client.query("begin transaction");
+    await client.query("begin transaction");
     await db.upsertProject(client, user.user_id, session.project_path);
 
     await db.upsertFiles(
@@ -45,9 +45,9 @@ const heartbeat = async (
     ).then((values) => values.flatMap((x) => x));
 
     await db.insertOutboxSegments(client, ids);
-    client.query("commit");
+    await client.query("commit");
   } catch (err) {
-    client.query("rollback");
+    await client.query("rollback");
     console.error(err);
   } finally {
     client.release();

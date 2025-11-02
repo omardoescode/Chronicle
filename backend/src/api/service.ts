@@ -13,17 +13,17 @@ const generateApiKey = async (
 ): Promise<ApiGenerationAfterAttempts | ApiKey | DBError> => {
   const client = await pool.connect();
   try {
-    client.query("begin transaction");
+    await client.query("begin transaction");
     for (let i = 0; i < ATTEMPTS; i++) {
       const test = crypto.randomBytes(32).toString("hex");
       const valid = await db.createAPIKey(client, test, user_id);
       if (valid) {
-        client.query("commit");
+        await client.query("commit");
         return test;
       }
     }
   } catch (err) {
-    client.query("rollback");
+    await client.query("rollback");
     console.error(err);
   } finally {
     client.release();
@@ -40,11 +40,11 @@ const setApiMetadata = async (
 ): Promise<void | UserNotFound> => {
   const client = await pool.connect();
   try {
-    client.query("begin transaction");
+    await client.query("begin transaction");
     await db.setAPIMetadata(client, api_key, editor, machine_name, os);
-    client.query("commit");
+    await client.query("commit");
   } catch (err) {
-    client.query("rollback");
+    await client.query("rollback");
     console.error(err);
   } finally {
     client.release();

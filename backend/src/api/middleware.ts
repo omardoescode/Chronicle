@@ -21,7 +21,6 @@ export function withApi<TArgs extends unknown[], TReturn>(
     const client = await pool.connect();
     // TODO: Handle this for failure
     const user = await getUserByApi(client, parsed.data);
-    console.log(user);
     client.release();
     if (user instanceof AppError) return errToResponse(user); // NOTE: ! this doens't feel right?
 
