@@ -1,4 +1,4 @@
-import { Kafka, Producer } from "kafkajs";
+import { Kafka, Producer, Transaction } from "kafkajs";
 import { Pool } from "pg";
 
 export default class OutboxProcessor {
@@ -11,7 +11,7 @@ export default class OutboxProcessor {
   ) {
     this.producer = kafka.producer({
       idempotent: true,
-      maxInFlightRequests: 5,
+      maxInFlightRequests: 1,
       transactionalId: "enriched-file-segment-processor",
     });
   }
@@ -49,6 +49,7 @@ export default class OutboxProcessor {
 
   private async processOutbox() {
     const client = await this.db.connect();
+    let transaction: null | Transaction;
 
     try {
       client.query("begin transaction");
@@ -58,7 +59,7 @@ export default class OutboxProcessor {
       const ids = ids_res.rows.map((x) => x.segment_id);
 
       if (ids.length == 0) {
-        client.query("commit");
+        await client.query("commit");
         return;
       }
 
@@ -116,7 +117,8 @@ order by fs.start_time;
         .then((v) => v.rows);
 
       // TODO: Look into implementation of a kafka transaction to fix the potential dual write problem here
-      await this.producer.send({
+      transaction = await this.producer.transaction();
+      await transaction.send({
         topic: this.analytics_topic,
         messages: segments.map((seg) => ({
           key: String(seg.segment_id),
@@ -129,10 +131,12 @@ order by fs.start_time;
         values: [ids],
       });
 
-      client.query("commit");
+      await client.query("commit");
+      await transaction.commit();
     } catch (err) {
       console.error(err);
-      client.query("rollback");
+      if (transaction) transaction.abort();
+      await client.query("rollback");
     } finally {
       client.release();
     }

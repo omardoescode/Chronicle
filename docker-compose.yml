@@ -20,7 +20,7 @@ services:
       - "max_replication_slots=10"
       - "-c"
       - "max_connections=300"
-    restart: unless-stopped
+    # restart: unless-stopped
     networks:
       - mynet
 
@@ -48,36 +48,40 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      # KAFKA_LOG_DIRS: /kafka/data
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
     networks:
       - mynet
 
-  connect:
-    image: quay.io/debezium/connect:3.3.0.Final
-    container_name: connect
-    ports:
-      - "8083:8083"
-    environment:
-      - BOOTSTRAP_SERVERS=kafka:9092
-      - GROUP_ID=1
-      - CONFIG_STORAGE_TOPIC=my_connect_configs
-      - OFFSET_STORAGE_TOPIC=my_connect_offsets
-      - STATUS_STORAGE_TOPIC=my_connect_statuses
-      - CONNECT_REST_ADVERTISED_HOST_NAME=connect
-      - CONNECT_PLUGIN_PATH=/kafka/connect,/debezium-plugins
-      - CONNECT_KEY_CONVERTER=org.apache.kafka.connect.json.JsonConverter
-      - CONNECT_VALUE_CONVERTER=org.apache.kafka.connect.json.JsonConverter
-      - CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE=false
-      - CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE=false
-      - CONNECT_LOG4J_ROOT_LOGLEVEL=INFO
-    volumes:
-      - ./connectors:/connectors
-    depends_on:
-      - kafka
-      - zookeeper
-      - postgres
-    networks:
-      - mynet
-    restart: unless-stopped
+  # connect:
+  #   image: quay.io/debezium/connect:3.3.0.Final
+  #   container_name: connect
+  #   ports:
+  #     - "8083:8083"
+  #   environment:
+  #     - BOOTSTRAP_SERVERS=kafka:9092
+  #     - GROUP_ID=1
+  #     - CONFIG_STORAGE_TOPIC=my_connect_configs
+  #     - OFFSET_STORAGE_TOPIC=my_connect_offsets
+  #     - STATUS_STORAGE_TOPIC=my_connect_statuses
+  #     - CONNECT_REST_ADVERTISED_HOST_NAME=connect
+  #     - CONNECT_PLUGIN_PATH=/kafka/connect,/debezium-plugins
+  #     - CONNECT_KEY_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+  #     - CONNECT_VALUE_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+  #     - CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE=false
+  #     - CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE=false
+  #     - CONNECT_LOG4J_ROOT_LOGLEVEL=INFO
+  #   volumes:
+  #     - ./connectors:/connectors
+  #   depends_on:
+  #     - kafka
+  #     - zookeeper
+  #     - postgres
+  #   networks:
+  #     - mynet
+  #   restart: unless-stopped
 
   kafdrop:
     image: obsidiandynamics/kafdrop:latest
