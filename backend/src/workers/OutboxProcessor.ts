@@ -49,7 +49,7 @@ export default class OutboxProcessor {
 
   private async processOutbox() {
     const client = await this.db.connect();
-    let transaction: null | Transaction;
+    let transaction: null | Transaction = null;
 
     try {
       client.query("begin transaction");
@@ -116,7 +116,6 @@ order by fs.start_time;
         })
         .then((v) => v.rows);
 
-      // TODO: Look into implementation of a kafka transaction to fix the potential dual write problem here
       transaction = await this.producer.transaction();
       await transaction.send({
         topic: this.analytics_topic,
@@ -135,7 +134,7 @@ order by fs.start_time;
       await transaction.commit();
     } catch (err) {
       console.error(err);
-      if (transaction) transaction.abort();
+      if (transaction !== null) transaction.abort();
       await client.query("rollback");
     } finally {
       client.release();

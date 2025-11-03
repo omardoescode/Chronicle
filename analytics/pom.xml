@@ -2,10 +2,10 @@
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>last_7_days</groupId>
-  <artifactId>last_7_days</artifactId>
+  <groupId>ChronicleAnalytics</groupId>
+  <artifactId>chronicle_analytics_job</artifactId>
   <packaging>jar</packaging>
-  <version>1.0-SNAPSHOT</version>
+  <version>1.0</version>
   <name>analytics</name>
   <url>http://maven.apache.org</url>
 
@@ -73,6 +73,11 @@
       <groupId>org.apache.flink</groupId>
       <artifactId>flink-json</artifactId>
       <version>${flink.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.flink</groupId>
+      <artifactId>flink-connector-jdbc</artifactId>
+      <version>3.1.2-1.17</version>
     </dependency>
   </dependencies>
 </project>
