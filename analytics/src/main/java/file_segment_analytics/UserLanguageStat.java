@@ -25,6 +25,13 @@ public class UserLanguageStat {
 		lang_durations.merge(seg.getLang(), duration, Long::sum);
 	}
 
+	// Used for removing stale data in a window
+	public void remove(EnrichedFileSegment seg) {
+		long dur = Duration.between(Instant.parse(seg.getStart_time()), Instant.parse(seg.getEnd_time())).toMillis();
+		this.total_duration -= dur;
+		this.lang_durations.computeIfPresent(seg.getLang(), (k, v) -> v - dur <= 0 ? null : v - dur);
+	}
+
 	public HashMap<String, Double> getLanguagePercentages() {
 		HashMap<String, Double> result = new HashMap<>();
 		for (var entry : lang_durations.entrySet()) {

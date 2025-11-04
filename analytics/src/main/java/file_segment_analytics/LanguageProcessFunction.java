@@ -11,13 +11,12 @@ import java.time.Instant;
 import java.util.Iterator;
 
 public class LanguageProcessFunction extends KeyedProcessFunction<Integer, EnrichedFileSegment, UserLanguageStat> {
-	// Keep per-user aggregated stats
+	// Per-user aggregated stats
 	private ValueState<UserLanguageStat> userStat;
 
-	// Keep individual event timestamps to drop old ones (simple retention)
+	// Individual segments for 7-day retention
 	private ListState<EnrichedFileSegment> segmentBuffer;
 
-	// Define constants
 	private static final long WINDOW_SIZE_MS = Duration.ofDays(7).toMillis();
 	private static final long EMIT_INTERVAL_MS = Duration.ofHours(1).toMillis();
 
@@ -34,50 +33,39 @@ public class LanguageProcessFunction extends KeyedProcessFunction<Integer, Enric
 
 	@Override
 	public void processElement(EnrichedFileSegment seg, Context ctx, Collector<UserLanguageStat> out) throws Exception {
-		// Get or create user's stat
+		// Load or create user stat
 		UserLanguageStat stat = userStat.value();
 		if (stat == null)
 			stat = new UserLanguageStat(seg.getUser_id());
 
-		// Add new segment to buffer
+		// Add new segment to aggregate and buffer
+		stat.add(seg);
 		segmentBuffer.add(seg);
 
-		// Remove old events (older than 7 days)
-		cleanOldSegments(ctx.timestamp());
+		// Remove expired segments (and their contributions)
+		cleanOldSegments(ctx.timerService().currentProcessingTime(), stat);
 
-		// Recalculate from remaining segments
-		UserLanguageStat newStat = rebuildStatFromBuffer();
+		// Update and emit
+		userStat.update(stat);
+		out.collect(stat);
 
-		// Save and emit
-		userStat.update(newStat);
-		out.collect(newStat);
-
-		// Register timer for next hourly emission
+		// Schedule next hourly emission
 		long nextEmit = alignToNextHour(ctx.timerService().currentProcessingTime());
 		ctx.timerService().registerProcessingTimeTimer(nextEmit);
 	}
 
-	private void cleanOldSegments(long now) throws Exception {
+	private void cleanOldSegments(long now, UserLanguageStat stat) throws Exception {
 		Iterator<EnrichedFileSegment> iter = segmentBuffer.get().iterator();
 		long cutoff = now - WINDOW_SIZE_MS;
+
 		while (iter.hasNext()) {
 			EnrichedFileSegment s = iter.next();
 			long end = Instant.parse(s.getEnd_time()).toEpochMilli();
-			if (end < cutoff)
+			if (end < cutoff) {
+				stat.remove(s);
 				iter.remove();
+			}
 		}
-	}
-
-	private UserLanguageStat rebuildStatFromBuffer() throws Exception {
-		Iterator<EnrichedFileSegment> iter = segmentBuffer.get().iterator();
-		UserLanguageStat newStat = null;
-		while (iter.hasNext()) {
-			EnrichedFileSegment seg = iter.next();
-			if (newStat == null)
-				newStat = new UserLanguageStat(seg.getUser_id());
-			newStat.add(seg);
-		}
-		return newStat;
 	}
 
 	private long alignToNextHour(long current) {
@@ -87,13 +75,11 @@ public class LanguageProcessFunction extends KeyedProcessFunction<Integer, Enric
 
 	@Override
 	public void onTimer(long timestamp, OnTimerContext ctx, Collector<UserLanguageStat> out) throws Exception {
-		// Emit snapshot every hour
 		UserLanguageStat stat = userStat.value();
 		if (stat != null) {
 			out.collect(stat);
 		}
 
-		// Register next timer
 		long nextEmit = alignToNextHour(timestamp);
 		ctx.timerService().registerProcessingTimeTimer(nextEmit);
 	}
