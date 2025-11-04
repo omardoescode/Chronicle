@@ -4,7 +4,6 @@ import java.io.Serializable;
 import java.util.Objects;
 
 public class EnrichedFileSegment implements Serializable {
-
 	// Segment info
 	private int segment_id;
 	private String start_time;

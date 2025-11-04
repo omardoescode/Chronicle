@@ -1,6 +1,8 @@
 package file_segment_analytics;
 
 import java.io.InputStream;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Properties;
 
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
@@ -27,10 +29,13 @@ public class FileSegmentAnalyticsJob {
 						new JsonDeserializationSchema<>(TypeInformation.of(EnrichedFileSegment.class)))
 				.build();
 
-		DataStream<EnrichedFileSegment> stream = env.fromSource(kafkaSource, WatermarkStrategy.noWatermarks(),
-				"enriched_file_segments");
+		DataStream<EnrichedFileSegment> stream = env.fromSource(kafkaSource,
+				WatermarkStrategy.forMonotonousTimestamps(), "enriched_file_segments");
 
-		stream.print();
+		stream.assignTimestampsAndWatermarks(
+				WatermarkStrategy.<EnrichedFileSegment>forBoundedOutOfOrderness(Duration.ofMinutes(5))
+						.withTimestampAssigner((seg, ts) -> Instant.parse(seg.getEnd_time()).toEpochMilli()))
+				.keyBy(EnrichedFileSegment::getUser_id).process(new LanguageProcessFunction()).print();
 
 		env.execute("FileSegmentPrinter");
 	}
