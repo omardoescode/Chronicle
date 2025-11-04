@@ -47,10 +47,10 @@ public class FileSegmentAnalyticsJob {
 
 		language_stream.addSink(JdbcSink.sink(
 				"INSERT INTO user_language_stats_active (user_id, window_start, window_end, total_duration, lang_percentages, updated_at) "
-						+ "VALUES (?, ?, ?, ?, ?::jsonb, NOW()) " + "ON CONFLICT (user_id) DO UPDATE "
-						+ "SET window_start = EXCLUDED.window_start, " + "    window_end = EXCLUDED.window_end, "
+						+ "VALUES (?, ?, ?, ?, ?::jsonb, NOW()) ON CONFLICT (user_id) DO UPDATE "
+						+ "SET window_start = EXCLUDED.window_start,     window_end = EXCLUDED.window_end, "
 						+ "    total_duration = EXCLUDED.total_duration, "
-						+ "    lang_durations = EXCLUDED.lang_durations, " + "    updated_at = NOW();",
+						+ "    lang_durations = EXCLUDED.lang_durations, updated_at = NOW();",
 				(ps, stat) -> {
 					ps.setInt(1, stat.getUserId());
 					ps.setTimestamp(2, Timestamp.from(stat.getWindowStart()));

@@ -87,9 +87,15 @@ public class LanguageProcessFunction extends KeyedProcessFunction<Integer, Enric
 	@Override
 	public void onTimer(long timestamp, OnTimerContext ctx, Collector<UserLanguageStat> out) throws Exception {
 		UserLanguageStat stat = userStat.value();
+		Iterable<EnrichedFileSegment> segmentsIterable = segmentBuffer.get();
 
-		if (stat != null) {
-			out.collect(stat); // always emit on every tick
+		boolean hasSegments = segmentsIterable.iterator().hasNext();
+
+		if (stat != null && hasSegments) {
+			out.collect(stat);
+		} else {
+			userStat.clear();
+			segmentBuffer.clear();
 		}
 
 		// Register next timer
