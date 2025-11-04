@@ -6,81 +6,94 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
 import org.apache.flink.util.Collector;
 
-import java.time.Duration;
 import java.time.Instant;
-import java.util.Iterator;
+import java.util.ArrayList;
+import java.util.List;
 
 public class LanguageProcessFunction extends KeyedProcessFunction<Integer, EnrichedFileSegment, UserLanguageStat> {
-	// Per-user aggregated stats
-	private ValueState<UserLanguageStat> userStat;
 
-	// Individual segments for 7-day retention
+	private ValueState<UserLanguageStat> userStat;
 	private ListState<EnrichedFileSegment> segmentBuffer;
 
-	private static final long WINDOW_SIZE_MS = Duration.ofDays(7).toMillis();
-	private static final long EMIT_INTERVAL_MS = Duration.ofHours(1).toMillis();
+	private final long windowSizeMs;
+	private final long emitIntervalMs;
+
+	public LanguageProcessFunction(long windowSizeMs, long emitIntervalMs) {
+		this.windowSizeMs = windowSizeMs;
+		this.emitIntervalMs = emitIntervalMs;
+	}
 
 	@Override
 	public void open(Configuration parameters) {
-		ValueStateDescriptor<UserLanguageStat> userStatDesc = new ValueStateDescriptor<>("userStat",
-				UserLanguageStat.class);
-		userStat = getRuntimeContext().getState(userStatDesc);
+		userStat = getRuntimeContext().getState(new ValueStateDescriptor<>("userStat", UserLanguageStat.class));
 
-		ListStateDescriptor<EnrichedFileSegment> segmentDesc = new ListStateDescriptor<>("segmentBuffer",
-				EnrichedFileSegment.class);
-		segmentBuffer = getRuntimeContext().getListState(segmentDesc);
+		segmentBuffer = getRuntimeContext()
+				.getListState(new ListStateDescriptor<>("segmentBuffer", EnrichedFileSegment.class));
 	}
 
 	@Override
 	public void processElement(EnrichedFileSegment seg, Context ctx, Collector<UserLanguageStat> out) throws Exception {
-		// Load or create user stat
 		UserLanguageStat stat = userStat.value();
 		if (stat == null)
 			stat = new UserLanguageStat(seg.getUser_id());
 
-		// Add new segment to aggregate and buffer
+		// Load all current segments
+		List<EnrichedFileSegment> segments = new ArrayList<>();
+		for (EnrichedFileSegment s : segmentBuffer.get()) {
+			segments.add(s);
+		}
+
+		// Add new segment
+		segments.add(seg);
 		stat.add(seg);
-		segmentBuffer.add(seg);
 
-		// Remove expired segments (and their contributions)
-		cleanOldSegments(ctx.timerService().currentProcessingTime(), stat);
+		// Clean expired
+		cleanOldSegments(segments, stat, ctx.timerService().currentProcessingTime());
 
-		// Update and emit
+		// Update state
+		segmentBuffer.update(segments);
 		userStat.update(stat);
+
+		// Emit immediately (you can remove this if you want only periodic emission)
 		out.collect(stat);
 
-		// Schedule next hourly emission
-		long nextEmit = alignToNextHour(ctx.timerService().currentProcessingTime());
+		// Schedule next emit
+		long nextEmit = alignToNextInterval(ctx.timerService().currentProcessingTime());
 		ctx.timerService().registerProcessingTimeTimer(nextEmit);
 	}
 
-	private void cleanOldSegments(long now, UserLanguageStat stat) throws Exception {
-		Iterator<EnrichedFileSegment> iter = segmentBuffer.get().iterator();
-		long cutoff = now - WINDOW_SIZE_MS;
+	private void cleanOldSegments(List<EnrichedFileSegment> segments, UserLanguageStat stat, long now) {
+		long cutoff = now - windowSizeMs;
+		List<EnrichedFileSegment> updated = new ArrayList<>();
 
-		while (iter.hasNext()) {
-			EnrichedFileSegment s = iter.next();
+		for (EnrichedFileSegment s : segments) {
 			long end = Instant.parse(s.getEnd_time()).toEpochMilli();
-			if (end < cutoff) {
+			if (end >= cutoff) {
+				updated.add(s);
+			} else {
 				stat.remove(s);
-				iter.remove();
 			}
 		}
+
+		segments.clear();
+		segments.addAll(updated);
 	}
 
-	private long alignToNextHour(long current) {
-		long hours = current / EMIT_INTERVAL_MS;
-		return (hours + 1) * EMIT_INTERVAL_MS;
+	private long alignToNextInterval(long current) {
+		long intervals = current / emitIntervalMs;
+		return (intervals + 1) * emitIntervalMs;
 	}
 
 	@Override
 	public void onTimer(long timestamp, OnTimerContext ctx, Collector<UserLanguageStat> out) throws Exception {
 		UserLanguageStat stat = userStat.value();
+
 		if (stat != null) {
-			out.collect(stat);
+			out.collect(stat); // always emit on every tick
 		}
 
-		long nextEmit = alignToNextHour(timestamp);
+		// Register next timer
+		long nextEmit = alignToNextInterval(timestamp);
 		ctx.timerService().registerProcessingTimeTimer(nextEmit);
 	}
 }

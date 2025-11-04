@@ -125,13 +125,14 @@ order by fs.start_time;
         })),
       });
 
+      // TODO: should I update and do a batch delete later, or delete right away?
       await client.query({
         text: `update outbox set processed=true where segment_id = any($1::int[])`,
         values: [ids],
       });
 
-      await client.query("commit");
       await transaction.commit();
+      await client.query("commit");
     } catch (err) {
       console.error(err);
       if (transaction !== null) transaction.abort();
