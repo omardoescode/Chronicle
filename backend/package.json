@@ -5,6 +5,7 @@
   "type": "module",
   "description": "Generated with `npm create pylon`",
   "scripts": {
+    "outbox": "bun run src/workers/run_outbox_processor.ts",
     "dev": "pylon dev -c \"bun run .pylon/index.js\"",
     "build": "pylon build",
     "init_db": "bun run src/init_db.ts"

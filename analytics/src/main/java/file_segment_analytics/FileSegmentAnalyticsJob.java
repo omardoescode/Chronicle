@@ -17,12 +17,18 @@ import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.core.JsonProcessin
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.api.functions.sink.SinkFunction;
+import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
+import org.apache.flink.streaming.api.windowing.assigners.SlidingEventTimeWindows;
+import org.apache.flink.streaming.api.windowing.time.Time;
 
 import models.EnrichedFileSegment;
 
 public class FileSegmentAnalyticsJob {
 	public static void main(String[] args) throws Exception {
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+		// TODO: Control parallelism
+		env.setParallelism(1);
 
 		Properties consumerConfig = new Properties();
 		try (InputStream stream = FileSegmentAnalyticsJob.class.getClassLoader()
@@ -38,37 +44,70 @@ public class FileSegmentAnalyticsJob {
 		DataStream<EnrichedFileSegment> stream = env.fromSource(kafkaSource,
 				WatermarkStrategy.forMonotonousTimestamps(), "enriched_file_segments");
 
-		DataStream<UserLanguageStat> language_stream = stream
-				.assignTimestampsAndWatermarks(
-						WatermarkStrategy.<EnrichedFileSegment>forBoundedOutOfOrderness(Duration.ofMinutes(5))
-								.withTimestampAssigner((seg, ts) -> Instant.parse(seg.getEnd_time()).toEpochMilli()))
-				.keyBy(EnrichedFileSegment::getUser_id)
-				.process(new LanguageProcessFunction(Duration.ofDays(7).toMillis(), Duration.ofMinutes(30).toMillis()));
+		// TODO: Change the watermark time in production
+		DataStream<EnrichedFileSegment> timestampedStream = stream.assignTimestampsAndWatermarks(
+				WatermarkStrategy.<EnrichedFileSegment>forBoundedOutOfOrderness(Duration.ofSeconds(1))
+						.withTimestampAssigner((seg, ts) -> {
+							return Instant.parse(seg.getEnd_time()).toEpochMilli();
+						}));
 
-		language_stream.addSink(JdbcSink.sink(
-				"INSERT INTO user_language_stats_active (user_id, window_start, window_end, total_duration, lang_percentages, updated_at) "
-						+ "VALUES (?, ?, ?, ?, ?::jsonb, NOW()) ON CONFLICT (user_id) DO UPDATE "
-						+ "SET window_start = EXCLUDED.window_start,     window_end = EXCLUDED.window_end, "
-						+ "    total_duration = EXCLUDED.total_duration, "
-						+ "    lang_durations = EXCLUDED.lang_durations, updated_at = NOW();",
-				(ps, stat) -> {
-					ps.setInt(1, stat.getUserId());
-					ps.setTimestamp(2, Timestamp.from(stat.getWindowStart()));
-					ps.setTimestamp(3, Timestamp.from(stat.getWindowEnd()));
-					ps.setLong(4, stat.getTotalDuration());
-					try {
-						String json = new ObjectMapper().writeValueAsString(stat.getLanguagePercentages());
-						ps.setString(5, json);
-					} catch (JsonProcessingException e) {
-						// Log and store an empty JSON fallback
-						ps.setString(3, "{}");
-						e.printStackTrace();
-					}
-				}, JdbcExecutionOptions.builder().withBatchSize(100).withBatchIntervalMs(200).build(),
-				new JdbcConnectionOptions.JdbcConnectionOptionsBuilder()
-						.withUrl("jdbc:postgresql://postgres_db:5432/myapp").withDriverName("org.postgresql.Driver")
-						.withUsername("admin").withPassword("secure_password").build()));
+		DataStream<UserAggregateStat> dailyStream = timestampedStream.keyBy(EnrichedFileSegment::getUser_id)
+				.window(TumblingEventTimeWindows.of(Time.days(1))).process(new UserStatWindowFunction("daily"));
 
-		env.execute("FileSegment");
+		DataStream<UserAggregateStat> rollingStream = timestampedStream.keyBy(EnrichedFileSegment::getUser_id)
+				.window(SlidingEventTimeWindows.of(Time.hours(24), Time.seconds(10))) // TODO: Change this beheavior to
+																						// 5
+																						// minutes I guess?
+				.process(new UserStatWindowFunction("rolling_24h"));
+
+		JdbcConnectionOptions jdbcOptions = new JdbcConnectionOptions.JdbcConnectionOptionsBuilder()
+				.withUrl("jdbc:postgresql://postgres_db:5432/myapp").withDriverName("org.postgresql.Driver")
+				.withUsername("admin").withPassword("secure_password").build();
+
+		dailyStream.addSink(createJdbcSink(jdbcOptions, 100, 5000L));
+
+		rollingStream.addSink(createJdbcSink(jdbcOptions, 10, 1000L));
+
+		env.execute("FileSegment Analytics");
+	}
+
+	private static SinkFunction<UserAggregateStat> createJdbcSink(JdbcConnectionOptions jdbcOptions, int batchSize,
+			long batchIntervalMs) {
+		// The PostgreSQL UPSERT query uses ON CONFLICT DO UPDATE
+		String sql = "INSERT INTO user_stats_aggregate (user_id, window_type, window_start, window_end, lang_durations, machine_durations, editor_durations, project_durations, activity_durations) "
+				+ "VALUES (?, ?, ?, ?, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb) "
+				+ "ON CONFLICT (user_id, window_type, window_start) DO UPDATE "
+				+ "SET window_end = EXCLUDED.window_end, " + "    lang_durations = EXCLUDED.lang_durations, "
+				+ "    machine_durations = EXCLUDED.machine_durations, "
+				+ "    editor_durations = EXCLUDED.editor_durations, "
+				+ "    project_durations = EXCLUDED.project_durations, "
+				+ "    activity_durations = EXCLUDED.activity_durations, " + "    updated_at = NOW();";
+
+		return JdbcSink.sink(sql, (ps, stat) -> {
+			ObjectMapper mapper = new ObjectMapper();
+			UserAggregateStat userStat = (UserAggregateStat) stat;
+			ps.setInt(1, userStat.getUserId());
+			ps.setString(2, stat.getWindowType());
+			ps.setTimestamp(3, Timestamp.from(userStat.getWindowStart()));
+			ps.setTimestamp(4, Timestamp.from(userStat.getWindowEnd()));
+
+			try {
+				// 5-9: Serialize Map fields to JSON strings
+				ps.setString(5, mapper.writeValueAsString(userStat.getLangDurations()));
+				ps.setString(6, mapper.writeValueAsString(userStat.getMachineDurations()));
+				ps.setString(7, mapper.writeValueAsString(userStat.getEditorDurations()));
+				ps.setString(8, mapper.writeValueAsString(userStat.getProjectDurations()));
+				ps.setString(9, mapper.writeValueAsString(userStat.getActivityDurations()));
+			} catch (JsonProcessingException e) {
+				// Handle serialization error gracefully
+				e.printStackTrace();
+				for (int i = 5; i <= 9; i++)
+					ps.setString(i, "{}"); // Send empty JSON object on error
+			}
+		},
+				// Define execution options (batching)
+				JdbcExecutionOptions.builder().withBatchSize(batchSize).withBatchIntervalMs(batchIntervalMs).build(),
+				// Provide JDBC connection details
+				jdbcOptions);
 	}
 }

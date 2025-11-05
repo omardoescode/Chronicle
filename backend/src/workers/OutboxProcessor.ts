@@ -18,11 +18,18 @@ export default class OutboxProcessor {
 
   async start() {
     await this.ensure_topic_exists();
-    await this.producer.connect();
-    setInterval(
-      () => this.processOutbox().catch(console.error),
-      this.intervalMs
-    );
+    await this.producer
+      .connect()
+      .then(() => console.log("Producer successfully connected"));
+
+    const interval = this.intervalMs;
+
+    const run = async () => {
+      await this.processOutbox().catch(console.error);
+      setTimeout(run, interval);
+    };
+
+    await run();
   }
 
   async ensure_topic_exists() {
@@ -48,6 +55,7 @@ export default class OutboxProcessor {
   }
 
   private async processOutbox() {
+    console.log("Processing");
     const client = await this.db.connect();
     let transaction: null | Transaction = null;
 
@@ -57,6 +65,7 @@ export default class OutboxProcessor {
         text: "select segment_id from outbox where processed is false for update",
       });
       const ids = ids_res.rows.map((x) => x.segment_id);
+      console.log(`found ${ids.length} segments`);
 
       if (ids.length == 0) {
         await client.query("commit");
@@ -130,6 +139,7 @@ order by fs.start_time;
         text: `update outbox set processed=true where segment_id = any($1::int[])`,
         values: [ids],
       });
+      console.log(`Submitted ${segments.length} segments`);
 
       await transaction.commit();
       await client.query("commit");

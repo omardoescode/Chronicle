@@ -1,0 +1,166 @@
+package file_segment_analytics;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
+import models.EnrichedFileSegment;
+
+public class UserAggregateStat {
+	private int user_id;
+	private long total_duration;
+	private Instant window_start;
+	private Instant window_end;
+	private String window_type;
+
+	private final HashMap<String, Long> machine_durations = new HashMap<>();
+	private final HashMap<String, Long> language_durations = new HashMap<>();
+	private final HashMap<String, Long> editor_durations = new HashMap<>();
+	private final HashMap<String, Long> project_durations = new HashMap<>();
+	private final HashMap<String, Long> activity_durations = new HashMap<>();
+
+	public UserAggregateStat(int user_id) {
+		this.user_id = user_id;
+		this.total_duration = 0;
+		this.window_start = null;
+		this.window_end = null;
+	}
+
+	public void setWindowType(String new_type) {
+		this.window_type = new_type;
+	}
+
+	public String getWindowType() {
+		return this.window_type;
+	}
+
+	public int getUserId() {
+		return user_id;
+	}
+
+	public long getTotalDuration() {
+		return total_duration;
+	}
+
+	public Instant getWindowStart() {
+		return window_start;
+	}
+
+	public Instant getWindowEnd() {
+		return window_end;
+	}
+
+	public void setWindowStart(Instant start) {
+		this.window_start = start;
+	}
+
+	public void setWindowEnd(Instant end) {
+		this.window_end = end;
+	}
+
+	public HashMap<String, Long> getMachineDurations() {
+		return machine_durations;
+	}
+
+	public HashMap<String, Long> getLangDurations() {
+		return language_durations;
+	}
+
+	public HashMap<String, Long> getEditorDurations() {
+		return editor_durations;
+	}
+
+	public HashMap<String, Long> getProjectDurations() {
+		return project_durations;
+	}
+
+	public HashMap<String, Long> getActivityDurations() {
+		return activity_durations;
+	}
+
+	public void add(EnrichedFileSegment seg) {
+		long duration = Duration.between(Instant.parse(seg.getStart_time()), Instant.parse(seg.getEnd_time()))
+				.toMillis();
+
+		this.total_duration += duration;
+
+		if (seg.getLang() != null)
+			language_durations.merge(seg.getLang(), duration, Long::sum);
+
+		if (seg.getEditor() != null)
+			editor_durations.merge(seg.getEditor(), duration, Long::sum);
+
+		if (seg.getMachine_name() != null)
+			machine_durations.merge(seg.getMachine_name(), duration, Long::sum);
+
+		if (seg.getProject_name() != null)
+			project_durations.merge(seg.getProject_name(), duration, Long::sum);
+
+		if (seg.getSegment_type() != null)
+			activity_durations.merge(seg.getSegment_type(), duration, Long::sum);
+
+		// Expand window boundaries
+		Instant start = Instant.parse(seg.getStart_time());
+		Instant end = Instant.parse(seg.getEnd_time());
+		if (window_start == null || start.isBefore(window_start))
+			window_start = start;
+		if (window_end == null || end.isAfter(window_end))
+			window_end = end;
+	}
+
+	public void remove(EnrichedFileSegment seg) {
+		long duration = Duration.between(Instant.parse(seg.getStart_time()), Instant.parse(seg.getEnd_time()))
+				.toMillis();
+		this.total_duration -= duration;
+
+		subtractOrRemove(language_durations, seg.getLang(), duration);
+		subtractOrRemove(machine_durations, seg.getMachine_name() != null ? seg.getMachine_name() : seg.getMachine_os(),
+				duration);
+		subtractOrRemove(project_durations,
+				seg.getProject_name() != null ? seg.getProject_name() : seg.getProject_path(), duration);
+		subtractOrRemove(activity_durations, seg.getSegment_type(), duration);
+		subtractOrRemove(editor_durations, seg.getEditor(), duration);
+	}
+
+	private void subtractOrRemove(HashMap<String, Long> map, String key, long duration) {
+		if (key == null)
+			return;
+		map.computeIfPresent(key, (k, v) -> {
+			long newVal = v - duration;
+			return newVal <= 0 ? null : newVal;
+		});
+	}
+
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder();
+		sb.append("UserDailyStat{user_id=").append(user_id).append(", total_duration=").append(total_duration)
+				.append(" ms");
+
+		if (window_start != null && window_end != null) {
+			sb.append(", window=[").append(window_start).append(" → ").append(window_end).append("]");
+		}
+
+		appendCategory(sb, "languages", language_durations);
+		appendCategory(sb, "machines", machine_durations);
+		appendCategory(sb, "projects", project_durations);
+		appendCategory(sb, "activities", activity_durations);
+		appendCategory(sb, "editor", editor_durations);
+
+		sb.append("}");
+		return sb.toString();
+	}
+
+	private void appendCategory(StringBuilder sb, String name, HashMap<String, Long> durations) {
+		if (!durations.isEmpty()) {
+			sb.append(", ").append(name).append("={");
+			for (Map.Entry<String, Long> entry : durations.entrySet()) {
+				double percent = (total_duration > 0) ? (entry.getValue() * 100.0 / total_duration) : 0.0;
+				sb.append(entry.getKey()).append(": ").append(String.format("%.2f%%", percent)).append(" (")
+						.append(entry.getValue()).append(" ms), ");
+			}
+			sb.setLength(sb.length() - 2);
+			sb.append("}");
+		}
+	}
+}

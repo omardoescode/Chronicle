@@ -18,24 +18,6 @@ import {
   ProjectSessionSchema,
 } from "./heartbeat/validation";
 import * as heartbeat from "./heartbeat/service";
-import OutboxProcessor from "./workers/OutboxProcessor";
-import env from "./utils/env";
-import { Kafka } from "kafkajs";
-import pool from "./pool";
-
-console.log("kafka is on", env.KAFKA_URL);
-const kafka = new Kafka({
-  clientId: "backend",
-  brokers: [env.KAFKA_URL],
-});
-
-const outbox_processor = new OutboxProcessor(
-  "enriched_file_segments",
-  kafka,
-  pool,
-  1000
-);
-outbox_processor.start();
 
 export const graphql = {
   Query: {
