@@ -64,9 +64,9 @@ public class FileSegmentAnalyticsJob {
 				.withUrl("jdbc:postgresql://postgres_db:5432/myapp").withDriverName("org.postgresql.Driver")
 				.withUsername("admin").withPassword("secure_password").build();
 
-		dailyStream.addSink(createJdbcSink(jdbcOptions, 100, 5000L, false));
+		dailyStream.addSink(createJdbcSink(jdbcOptions, 1, 0, false));
 
-		rollingStream.addSink(createJdbcSink(jdbcOptions, 10, 1000L, true));
+		rollingStream.addSink(createJdbcSink(jdbcOptions, 1, 0, true));
 
 		env.execute("FileSegment Analytics");
 	}
@@ -97,8 +97,8 @@ public class FileSegmentAnalyticsJob {
 					+ "activity_durations = EXCLUDED.activity_durations, " + "updated_at = NOW();";
 		} else {
 			sql = "INSERT INTO user_stats_aggregate ("
-					+ "user_id, window_type, window_start, window_end, lang_durations, machine_durations, editor_durations, "
-					+ "project_durations, activity_durations) "
+					+ "user_id, window_type, lang_durations, machine_durations, editor_durations, "
+					+ "project_durations, activity_durations, window_start, window_end) "
 					+ "VALUES (?, ?, ?, ?, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb) "
 					+ "ON CONFLICT (user_id, window_type, window_start) DO UPDATE SET "
 					+ "window_end = EXCLUDED.window_end, " + "lang_durations = EXCLUDED.lang_durations, "
