@@ -64,44 +64,72 @@ public class FileSegmentAnalyticsJob {
 				.withUrl("jdbc:postgresql://postgres_db:5432/myapp").withDriverName("org.postgresql.Driver")
 				.withUsername("admin").withPassword("secure_password").build();
 
-		dailyStream.addSink(createJdbcSink(jdbcOptions, 100, 5000L));
+		dailyStream.addSink(createJdbcSink(jdbcOptions, 100, 5000L, false));
 
-		rollingStream.addSink(createJdbcSink(jdbcOptions, 10, 1000L));
+		rollingStream.addSink(createJdbcSink(jdbcOptions, 10, 1000L, true));
 
 		env.execute("FileSegment Analytics");
 	}
 
 	private static SinkFunction<UserAggregateStat> createJdbcSink(JdbcConnectionOptions jdbcOptions, int batchSize,
-			long batchIntervalMs) {
-		// The PostgreSQL UPSERT query uses ON CONFLICT DO UPDATE
-		String sql = "INSERT INTO user_stats_aggregate (user_id, window_type, window_start, window_end, lang_durations, machine_durations, editor_durations, project_durations, activity_durations) "
-				+ "VALUES (?, ?, ?, ?, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb) "
-				+ "ON CONFLICT (user_id, window_type, window_start) DO UPDATE "
-				+ "SET window_end = EXCLUDED.window_end, " + "    lang_durations = EXCLUDED.lang_durations, "
-				+ "    machine_durations = EXCLUDED.machine_durations, "
-				+ "    editor_durations = EXCLUDED.editor_durations, "
-				+ "    project_durations = EXCLUDED.project_durations, "
-				+ "    activity_durations = EXCLUDED.activity_durations, " + "    updated_at = NOW();";
+			long batchIntervalMs, boolean rolling) {
+		String table = rolling ? "user_stats_rolling" : "user_stats_aggregate";
+		String conflict = rolling ? "(user_id, window_type)" : "(user_id, window_type, window_start)";
+
+		String columns = "user_id, window_type, lang_durations, machine_durations, editor_durations, project_durations, activity_durations";
+		String values = "?, ?, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb";
+
+		if (!rolling) {
+			columns += ", window_start, window_end";
+			values += ", ?, ?";
+		}
+
+		String sql;
+		if (rolling) {
+			sql = "INSERT INTO user_stats_rolling ("
+					+ "user_id, window_type, lang_durations, machine_durations, editor_durations, "
+					+ "project_durations, activity_durations) "
+					+ "VALUES (?, ?, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb) "
+					+ "ON CONFLICT (user_id, window_type) DO UPDATE SET " + "lang_durations = EXCLUDED.lang_durations, "
+					+ "machine_durations = EXCLUDED.machine_durations, "
+					+ "editor_durations = EXCLUDED.editor_durations, "
+					+ "project_durations = EXCLUDED.project_durations, "
+					+ "activity_durations = EXCLUDED.activity_durations, " + "updated_at = NOW();";
+		} else {
+			sql = "INSERT INTO user_stats_aggregate ("
+					+ "user_id, window_type, window_start, window_end, lang_durations, machine_durations, editor_durations, "
+					+ "project_durations, activity_durations) "
+					+ "VALUES (?, ?, ?, ?, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb) "
+					+ "ON CONFLICT (user_id, window_type, window_start) DO UPDATE SET "
+					+ "window_end = EXCLUDED.window_end, " + "lang_durations = EXCLUDED.lang_durations, "
+					+ "machine_durations = EXCLUDED.machine_durations, "
+					+ "editor_durations = EXCLUDED.editor_durations, "
+					+ "project_durations = EXCLUDED.project_durations, "
+					+ "activity_durations = EXCLUDED.activity_durations, " + "updated_at = NOW();";
+		}
 
 		return JdbcSink.sink(sql, (ps, stat) -> {
 			ObjectMapper mapper = new ObjectMapper();
 			UserAggregateStat userStat = (UserAggregateStat) stat;
 			ps.setInt(1, userStat.getUserId());
 			ps.setString(2, stat.getWindowType());
-			ps.setTimestamp(3, Timestamp.from(userStat.getWindowStart()));
-			ps.setTimestamp(4, Timestamp.from(userStat.getWindowEnd()));
+
+			if (!rolling) {
+				ps.setTimestamp(8, Timestamp.from(userStat.getWindowStart()));
+				ps.setTimestamp(9, Timestamp.from(userStat.getWindowEnd()));
+			}
 
 			try {
 				// 5-9: Serialize Map fields to JSON strings
-				ps.setString(5, mapper.writeValueAsString(userStat.getLangDurations()));
-				ps.setString(6, mapper.writeValueAsString(userStat.getMachineDurations()));
-				ps.setString(7, mapper.writeValueAsString(userStat.getEditorDurations()));
-				ps.setString(8, mapper.writeValueAsString(userStat.getProjectDurations()));
-				ps.setString(9, mapper.writeValueAsString(userStat.getActivityDurations()));
+				ps.setString(3, mapper.writeValueAsString(userStat.getLangDurations()));
+				ps.setString(4, mapper.writeValueAsString(userStat.getMachineDurations()));
+				ps.setString(5, mapper.writeValueAsString(userStat.getEditorDurations()));
+				ps.setString(6, mapper.writeValueAsString(userStat.getProjectDurations()));
+				ps.setString(7, mapper.writeValueAsString(userStat.getActivityDurations()));
 			} catch (JsonProcessingException e) {
 				// Handle serialization error gracefully
 				e.printStackTrace();
-				for (int i = 5; i <= 9; i++)
+				for (int i = 3; i <= 7; i++)
 					ps.setString(i, "{}"); // Send empty JSON object on error
 			}
 		},

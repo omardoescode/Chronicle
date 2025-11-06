@@ -16,8 +16,23 @@ create table if not exists user_stats_aggregate (
   primary key (user_id, window_type, window_start)
 );
 
-create index idx_user_stats_time_range on user_stats_aggregate(user_id, window_type, window_start desc);
-create index idx_user_stats_updated on user_stats_aggregate(updated_at) where window_type like 'rolling%';
+create index if not exists idx_user_stats_time_range on user_stats_aggregate(user_id, window_type, window_start desc);
+create index if not exists idx_user_stats_updated on user_stats_aggregate(updated_at) where window_type like 'rolling%';
+
+create table if not exists user_stats_rolling (
+  user_id int not null,
+  window_type text not null check (window_type in (
+    'rolling_24h', 'rolling_7d', 'rolling_30d', 'rolling_365d'
+  )),
+  lang_durations jsonb default '{}'::jsonb,
+  machine_durations jsonb default '{}'::jsonb,
+  editor_durations jsonb default '{}'::jsonb,
+  project_durations jsonb default '{}'::jsonb,
+  activity_durations jsonb default '{}'::jsonb,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  primary key (user_id, window_type)
+);
 
 create table if not exists user_project_stats_aggregate (
   project_id int primary key,

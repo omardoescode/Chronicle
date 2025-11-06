@@ -8,7 +8,7 @@ const dir = path.resolve("./migrations");
 const files = fs
   .readdirSync(dir)
   .filter((f) => f.endsWith(".sql"))
-  .sort();
+  .sort(); // Apply migrations one by one
 
 for (const file of files) {
   console.log(`Processing file: ${file}`);
