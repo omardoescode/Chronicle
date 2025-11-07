@@ -2,6 +2,7 @@ import * as fs from 'fs'
 
 export class ChronicleConfig {
   private configFile: string = 'chronicle-config.json'
+  private logFile: string = 'chronicle-log.txt'
   private configData: any = {}
 
   constructor() {
@@ -33,5 +34,10 @@ export class ChronicleConfig {
     } catch (error) {
       console.error('Error saving config:', error)
     }
+  }
+
+  public log(message: string): void {
+    const timestamp = new Date().toISOString()
+    fs.appendFileSync(this.logFile, `[${timestamp}] ${message}\n`)
   }
 }

@@ -58,13 +58,11 @@ export class APIRequester {
     })
 
     const json_response: any = await response.json()
-
-    if (json_response.errors) {
-      console.error('GraphQL Errors:', json_response.errors)
-      throw new Error('Failed to set API metadata')
-    }
-
     const data = json_response.data.setApiMetadata
+
+    if (data.errors.length > 0) {
+      throw new Error('Failed to set API metadata', { cause: data.errors })
+    }
 
     return data.success
   }
@@ -79,13 +77,6 @@ export class APIRequester {
       }
     `
 
-    console.log(
-      JSON.stringify({
-        query,
-        variables: { session: heartbeat.session },
-      })
-    )
-
     const response = await fetch(APIRequester.API_URL, {
       method: 'POST',
       headers: {
@@ -99,15 +90,11 @@ export class APIRequester {
     })
 
     const json_response: any = await response.json()
-
-    console.log(json_response)
-
-    if (json_response.errors) {
-      console.error('GraphQL Errors:', json_response.errors)
-      throw new Error('Failed to send heartbeat')
-    }
-
     const data = json_response.data.heartbeat
+
+    if (data.errors.length > 0) {
+      throw new Error('Failed to send heartbeat', { cause: data.errors })
+    }
 
     return data.success
   }

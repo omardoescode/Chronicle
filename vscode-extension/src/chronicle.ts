@@ -1,5 +1,5 @@
 import * as vscode from 'vscode'
-import { apiKeyInvalid } from './utils'
+import { apiKeyInvalid, isAIEdit } from './utils'
 import { APIRequester } from './api_requester'
 import { ChronicleConfig } from './configs'
 import {
@@ -29,12 +29,14 @@ export class Chronicle {
   private lastEditAt: number = 0
   private isDebugging: boolean = false
   private isAIEditing: boolean = false
+  private debuggingAllowed: boolean = false
 
   constructor() {
     this.config = new ChronicleConfig()
   }
 
   public async initialize() {
+    this.readDebuggingSetting()
     await this.checkForApiKey()
     this.checkForOpenFile()
     this.setupEventListeners()
@@ -44,7 +46,7 @@ export class Chronicle {
     const storedKey = this.config?.getApiKey()
 
     if (storedKey && !apiKeyInvalid(storedKey)) {
-      this.setApiKey(storedKey)
+      await this.loadApiKey(storedKey)
       vscode.window.setStatusBarMessage('Chronicle API key loaded')
       return
     } else {
@@ -94,13 +96,20 @@ export class Chronicle {
     return this.config?.getApiKey() || this.apiKey
   }
 
+  private async loadApiKey(key: string) {
+    this.apiKey = key
+    this.apiRequester = APIRequester.getInstance(this.apiKey)
+    await this.sendApiMetadata()
+  }
+
   private async setApiKey(key: string) {
     this.config?.setApiKey(key)
     this.apiKey = key
     this.apiRequester = APIRequester.getInstance(this.apiKey)
-    this.sendApiMetadata()
-    vscode.window.setStatusBarMessage('Chronicle API key loaded')
-    vscode.window.showInformationMessage('Chronicle API key updated')
+    await this.sendApiMetadata()
+    if (this.debuggingAllowed) {
+      vscode.window.showInformationMessage('Chronicle API key updated')
+    }
   }
 
   private async sendApiMetadata() {
@@ -113,13 +122,42 @@ export class Chronicle {
       }
       try {
         const success = await this.apiRequester.setApiMetadata(metadata)
-        if (success)
-          vscode.window.showInformationMessage(
-            'API Metadata sent successfully.'
+        if (success) {
+          if (this.debuggingAllowed) {
+            vscode.window.showInformationMessage(
+              'API Metadata sent successfully.'
+            )
+          }
+          this.config?.log(
+            'API Metadata sent successfully for api_key: ' + this.apiKey
           )
+        }
       } catch (error: any) {
+        if (this.debuggingAllowed) {
+          if (error.cause[0].includes('METADATA_EXISTS')) {
+            vscode.window.showInformationMessage(
+              'API Metadata already exists on server.'
+            )
+            return
+          }
+
+          vscode.window.showErrorMessage(
+            'Error sending API metadata: ' +
+              error.message +
+              ' Cause: ' +
+              error.cause
+          )
+        }
+
+        this.config?.log(
+          'Error sending API metadata: ' +
+            error.message +
+            ' Cause: ' +
+            error.cause
+        )
+
         vscode.window.showErrorMessage(
-          'Error sending API metadata: ' + error.message
+          'Chronicle API key seems invalid, please enter a valid key.'
         )
 
         await this.promptForApiKey()
@@ -129,11 +167,6 @@ export class Chronicle {
 
   private setupEventListeners() {
     const subscriptions: vscode.Disposable[] = []
-    // vscode.window.onDidChangeTextEditorSelection(
-    //   this.onChangeSelection,
-    //   this,
-    //   subscriptions
-    // )
     vscode.workspace.onDidChangeTextDocument(
       this.onChangeTextDocument,
       this,
@@ -161,11 +194,11 @@ export class Chronicle {
     this.disposable = vscode.Disposable.from(...subscriptions)
   }
 
-  private onChangeSelection(event: vscode.TextEditorSelectionChangeEvent) {
-    // console.log('Selection changed:', event.selections)
-  }
-
   private onChangeTextDocument(event: vscode.TextDocumentChangeEvent) {
+    if (isAIEdit(event)) {
+      this.isAIEditing = true
+    }
+
     if (
       this.lastEditAt != 0 &&
       this.lastEditAt < Date.now() - this.editingInterval
@@ -176,7 +209,10 @@ export class Chronicle {
 
     this.updateLineNumbers()
     this.lastEditAt = Date.now()
-    // console.log('Document changed:', event.contentChanges)
+
+    if (this.isAIEditing) {
+      this.isAIEditing = false
+    }
   }
 
   private async onChangeTab(editor: vscode.TextEditor | undefined) {
@@ -189,8 +225,6 @@ export class Chronicle {
     }
 
     this.isAIEditing = false
-
-    // console.log('Active editor changed:', editor?.document.uri.toString())
   }
 
   private onSave(document: vscode.TextDocument) {
@@ -199,8 +233,6 @@ export class Chronicle {
     this.appendFileSegment()
 
     this.focusedFileAt = Date.now()
-
-    // console.log('Document saved:', document.uri.toString())
   }
 
   private onDidStartDebugSession() {
@@ -220,9 +252,6 @@ export class Chronicle {
     if (!file) return
 
     const current_line_count = doc.lineCount
-    // if (this.linesInFiles[file] == undefined) {
-    //   this.linesInFiles[file] = current_line_count
-    // }
 
     const prev_line_count = this.linesInFiles[file] ?? current_line_count
     const delta = current_line_count - prev_line_count
@@ -233,9 +262,6 @@ export class Chronicle {
     changes[file] = (changes[file] ?? 0) + delta
 
     this.linesInFiles[file] = current_line_count
-
-    console.log(this.lineChanges)
-    console.log(this.linesInFiles)
   }
 
   private async appendFileSegment(end_time: Date = new Date()) {
@@ -244,9 +270,6 @@ export class Chronicle {
 
     const file = doc.fileName
     if (!file) return
-
-    console.log('Focused: ', this.focusedFile)
-    console.log('New: ', file)
 
     if (!this.focusedFile) return
 
@@ -274,7 +297,11 @@ export class Chronicle {
         this.heartbeatFileSegments[this.focusedFile].segments.push(segment)
       }
 
-      console.log(segment)
+      this.config?.log(
+        `Appending segment for file ${this.focusedFile}: ${JSON.stringify(
+          segment
+        )}`
+      )
 
       this.lineChanges.human[this.focusedFile] = 0
       this.lineChanges.ai[this.focusedFile] = 0
@@ -300,31 +327,63 @@ export class Chronicle {
 
       if (filesData.length == 0) return
 
-      const request_body: HeartbeatRequestBody = {
-        session: {
-          project_path: vscode.workspace.getWorkspaceFolder(
-            vscode.Uri.file(filesData[0].file_path)
-          )!.uri.fsPath,
-          files: filesData,
-        },
+      const workspaceFolder = vscode.workspace.getWorkspaceFolder(
+        vscode.Uri.file(filesData[0].file_path)
+      )
+
+      let request_body: HeartbeatRequestBody
+
+      if (workspaceFolder && workspaceFolder.uri.scheme !== 'untitled') {
+        request_body = {
+          session: {
+            project_path: workspaceFolder.uri.fsPath,
+            files: filesData,
+          },
+        }
+      } else {
+        request_body = {
+          session: {
+            files: filesData,
+          },
+        }
       }
 
-      console.log(request_body)
+      this.config?.log(
+        `Sending heartbeat with last ${filesData.length} files segments`
+      )
+
       let success = false
 
       try {
         success = await this.apiRequester?.sendHeartbeat(request_body)
-      } catch (error) {
-        vscode.window.showErrorMessage(
-          'Failed to send heartbeat now, aborting.'
+      } catch (error: any) {
+        if (this.debuggingAllowed) {
+          vscode.window.showErrorMessage(
+            'Failed to send heartbeat now, aborting. ' +
+              error.message +
+              ' ,Cause: ' +
+              error.cause
+          )
+        }
+        this.config?.log(
+          'Failed to send heartbeat: ' +
+            error.message +
+            ' ,Cause: ' +
+            error.cause
         )
         return
       }
 
       if (!success) {
-        vscode.window.showErrorMessage(
-          'Failed to send heartbeat now, aborting.'
+        if (this.debuggingAllowed) {
+          vscode.window.showErrorMessage(
+            'Failed to send heartbeat now, aborting.'
+          )
+        }
+        this.config?.log(
+          'Failed to send heartbeat: Unknown error, no success response.'
         )
+
         return
       }
 
@@ -333,9 +392,15 @@ export class Chronicle {
       const now = Date.now()
       this.lastHeartbeat = now
 
-      vscode.window.showInformationMessage('Heartbeat sent successfully')
+      if (this.debuggingAllowed) {
+        vscode.window.showInformationMessage('Heartbeat sent successfully')
+      }
+      this.config?.log('Heartbeat sent successfully')
     } else {
-      vscode.window.showErrorMessage('Chronicle API key not set')
+      if (this.debuggingAllowed) {
+        vscode.window.showErrorMessage('Chronicle API key not set')
+      }
+      this.config?.log('Chronicle API key not set, cannot send heartbeat')
       this.promptForApiKey()
     }
   }
@@ -350,6 +415,31 @@ export class Chronicle {
     this.focusedFile = file
     this.focusedFileLang = doc.languageId
     this.focusedFileAt = Date.now()
+  }
+
+  private readDebuggingSetting() {
+    const debug_mode =
+      vscode.workspace
+        .getConfiguration('chronicle')
+        .get<boolean>('allowDebug') || false
+
+    this.debuggingAllowed = debug_mode
+  }
+
+  public toggleDebugging() {
+    const debug_mode = vscode.workspace
+      .getConfiguration('chronicle')
+      .get<boolean>('allowDebug')
+
+    vscode.workspace
+      .getConfiguration('chronicle')
+      .update('allowDebug', !debug_mode, true)
+
+    this.debuggingAllowed = !debug_mode
+
+    vscode.window.setStatusBarMessage(
+      `Chronicle Debug Mode: ${!debug_mode ? 'Enabled' : 'Disabled'}`
+    )
   }
 
   public dispose() {

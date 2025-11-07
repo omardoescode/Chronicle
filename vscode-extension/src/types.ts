@@ -20,7 +20,7 @@ export interface HeartbeatFile {
 }
 
 export interface HeartbeatSession {
-  project_path: string
+  project_path?: string
   files: HeartbeatFile[]
 }
 

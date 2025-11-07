@@ -16,20 +16,20 @@
   "contributes": {
     "commands": [
       {
-        "command": "chronicle.helloWorld",
-        "title": "Hello World"
+        "command": "chronicle.toggleDebug",
+        "title": "Chronicle: Toggle Debugging"
       },
       {
         "command": "chronicle.apiKey",
-        "title": "Set API Key"
+        "title": "Chronicle: Set API Key"
       }
     ],
     "configuration": {
       "title": "Chronicle",
       "properties": {
-        "chronicle.apiKey": {
-          "type": "string",
-          "description": "Your API key for the Chronicle service."
+        "chronicle.allowDebug": {
+          "type": "boolean",
+          "description": "Allow debugging of the Chronicle extension."
         }
       }
     }
