@@ -32,19 +32,19 @@ const setAPIMetadata = async (
   editor: Editor,
   machine_name: string,
   os: string
-): Promise<void | ApiMetadataAlreadySet> => {
+): Promise<void | ApiMetadataAlreadySet | ApiNotFound> => {
   const keyRes = await client.query({
     text: "SELECT user_id, metadata_set FROM api_key WHERE value = $1 FOR UPDATE",
     values: [api_key],
   });
 
   if (keyRes.rowCount === 0) {
-    throw new ApiNotFound();
+    return new ApiNotFound();
   }
 
   const { user_id, metadata_set } = keyRes.rows[0];
 
-  if (metadata_set) throw new ApiMetadataAlreadySet();
+  if (metadata_set) return new ApiMetadataAlreadySet();
 
   // Create the machine
   const machineQ = await client.query({
@@ -78,7 +78,7 @@ const getUserByApi = async (
     values: [user_id],
   });
 
-  if (userRes.rowCount === 0) throw new ApiNotFound();
+  if (userRes.rowCount === 0) return new ApiNotFound();
   const { name, email } = userRes.rows[0];
 
   const user: User = {

@@ -2,9 +2,14 @@ import * as db from "./db";
 import crypto from "node:crypto";
 import { ApiKey, Editor } from "./validation";
 import { UserNotFound } from "@/auth/errors";
-import { ApiGenerationAfterAttempts } from "./errors";
+import {
+  ApiGenerationAfterAttempts,
+  ApiMetadataAlreadySet,
+  ApiNotFound,
+} from "./errors";
 import { DBError } from "@/pool";
 import pool from "@/pool";
+import { AppError } from "@/utils/error";
 
 const ATTEMPTS = 3;
 
@@ -37,11 +42,21 @@ const setApiMetadata = async (
   editor: Editor,
   machine_name: string,
   os: string
-): Promise<void | UserNotFound> => {
+): Promise<void | UserNotFound | ApiMetadataAlreadySet | ApiNotFound> => {
   const client = await pool.connect();
   try {
     await client.query("begin transaction");
-    await db.setAPIMetadata(client, api_key, editor, machine_name, os);
+    const res = await db.setAPIMetadata(
+      client,
+      api_key,
+      editor,
+      machine_name,
+      os
+    );
+    if (res instanceof AppError) {
+      await client.query("rollback");
+      return res;
+    }
     await client.query("commit");
   } catch (err) {
     await client.query("rollback");
