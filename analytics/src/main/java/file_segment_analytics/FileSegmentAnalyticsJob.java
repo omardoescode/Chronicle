@@ -27,6 +27,9 @@ import org.apache.flink.streaming.api.windowing.assigners.SlidingEventTimeWindow
 import org.apache.flink.streaming.api.windowing.time.Time;
 
 import models.EnrichedFileSegment;
+import stats.UserAggregateStat;
+import stats.UserProjectAggregateStat;
+import stats.StatFactory;
 
 public class FileSegmentAnalyticsJob {
 	public static void main(String[] args) throws Exception {

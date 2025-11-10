@@ -1,6 +1,10 @@
 package file_segment_analytics;
 
 import models.EnrichedFileSegment;
+import stats.IStat;
+import stats.StatFactory;
+import stats.WindowContext;
+
 import org.apache.flink.streaming.api.functions.windowing.ProcessWindowFunction;
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 import org.apache.flink.util.Collector;

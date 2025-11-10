@@ -1,4 +1,4 @@
-package file_segment_analytics;
+package stats;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -6,8 +6,9 @@ import java.util.HashMap;
 import java.util.Map;
 import models.EnrichedFileSegment;
 
-public class UserAggregateStat implements IStat {
+public class UserProjectAggregateStat implements IStat {
 	private final int user_id;
+	private final String project_path;
 	private long total_duration;
 	private Instant window_start;
 	private Instant window_end;
@@ -18,16 +19,18 @@ public class UserAggregateStat implements IStat {
 	private final HashMap<String, Long> editor_durations = new HashMap<>();
 	private final HashMap<String, Long> project_durations = new HashMap<>();
 	private final HashMap<String, Long> activity_durations = new HashMap<>();
+	private final HashMap<String, Long> files_durations = new HashMap<>();
 
-	public UserAggregateStat(int user_id) {
+	public UserProjectAggregateStat(int user_id, String project_path) {
 		this.user_id = user_id;
+		this.project_path = project_path;
 		this.total_duration = 0;
 		this.window_start = null;
 		this.window_end = null;
 	}
 
-	public void setWindowType(String new_type) {
-		this.window_type = new_type;
+	public void setWindowType(String window_type) {
+		this.window_type = window_type;
 	}
 
 	public String getWindowType() {
@@ -36,6 +39,10 @@ public class UserAggregateStat implements IStat {
 
 	public int getUserId() {
 		return user_id;
+	}
+
+	public String getProjectPath() {
+		return project_path;
 	}
 
 	public long getTotalDuration() {
@@ -78,6 +85,10 @@ public class UserAggregateStat implements IStat {
 		return activity_durations;
 	}
 
+	public HashMap<String, Long> getFilesDurations() {
+		return files_durations;
+	}
+
 	public void add(EnrichedFileSegment seg) {
 		long duration = Duration.between(Instant.parse(seg.getStart_time()), Instant.parse(seg.getEnd_time()))
 				.toMillis();
@@ -99,6 +110,9 @@ public class UserAggregateStat implements IStat {
 		if (seg.getSegment_type() != null)
 			activity_durations.merge(seg.getSegment_type(), duration, Long::sum);
 
+		if (seg.getFile_path() != null)
+			files_durations.merge(seg.getFile_path(), duration, Long::sum);
+
 		// Expand window boundaries
 		Instant start = Instant.parse(seg.getStart_time());
 		Instant end = Instant.parse(seg.getEnd_time());
@@ -114,24 +128,17 @@ public class UserAggregateStat implements IStat {
 		setWindowEnd(ctx.getWindowEnd());
 	}
 
-	//
-	// public void remove(EnrichedFileSegment seg) {
-	// long duration = Duration.between(Instant.parse(seg.getStart_time()),
-	// Instant.parse(seg.getEnd_time()))
-	// .toMillis();
-	// this.total_duration -= duration;
-	// }
-
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
-		sb.append("UserDailyStat{user_id=").append(user_id).append(", total_duration=").append(total_duration)
-				.append(" ms");
+		sb.append("UserProjectStat{user_id=").append(user_id).append(", project_path=").append(project_path)
+				.append(", total_duration=").append(total_duration).append(" ms");
 
 		if (window_start != null && window_end != null) {
 			sb.append(", window=[").append(window_start).append(" → ").append(window_end).append("]");
 		}
 
+		appendCategory(sb, "files", files_durations);
 		appendCategory(sb, "languages", language_durations);
 		appendCategory(sb, "machines", machine_durations);
 		appendCategory(sb, "projects", project_durations);

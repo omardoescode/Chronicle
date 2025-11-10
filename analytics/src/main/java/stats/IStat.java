@@ -1,4 +1,4 @@
-package file_segment_analytics;
+package stats;
 
 import models.EnrichedFileSegment;
 
