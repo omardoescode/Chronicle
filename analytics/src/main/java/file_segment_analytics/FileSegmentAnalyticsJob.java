@@ -1,6 +1,7 @@
 package file_segment_analytics;
 
 import java.io.InputStream;
+import java.io.Serializable;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
@@ -8,6 +9,9 @@ import java.util.Properties;
 
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.api.java.functions.KeySelector;
+import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.api.java.typeutils.TypeExtractor;
 import org.apache.flink.connector.jdbc.JdbcConnectionOptions;
 import org.apache.flink.connector.jdbc.JdbcExecutionOptions;
 import org.apache.flink.connector.jdbc.JdbcSink;
@@ -52,13 +56,27 @@ public class FileSegmentAnalyticsJob {
 						}));
 
 		DataStream<UserAggregateStat> dailyStream = timestampedStream.keyBy(EnrichedFileSegment::getUser_id)
-				.window(TumblingEventTimeWindows.of(Time.days(1))).process(new UserStatWindowFunction("daily"));
+				.window(TumblingEventTimeWindows.of(Time.days(1)))
+				.process(
+						new UserStatWindowFunction<Integer, UserAggregateStat>("daily", new UserAggregateStatFactory()))
+				.returns(TypeExtractor.getForClass(UserAggregateStat.class));
 
 		DataStream<UserAggregateStat> rollingStream = timestampedStream.keyBy(EnrichedFileSegment::getUser_id)
-				.window(SlidingEventTimeWindows.of(Time.hours(24), Time.seconds(10))) // TODO: Change this beheavior to
-																						// 5
-																						// minutes I guess?
-				.process(new UserStatWindowFunction("rolling_24h"));
+				.window(SlidingEventTimeWindows.of(Time.hours(24), Time.seconds(10)))
+				.process(new UserStatWindowFunction<Integer, UserAggregateStat>("rolling_24h",
+						new UserAggregateStatFactory()))
+				.returns(TypeExtractor.getForClass(UserAggregateStat.class));
+
+		DataStream<UserProjectAggregateStat> projectsRollingStream = timestampedStream
+				.keyBy(new KeySelector<EnrichedFileSegment, Tuple2<Integer, String>>() {
+					@Override
+					public Tuple2<Integer, String> getKey(EnrichedFileSegment seg) throws Exception {
+						return Tuple2.of(seg.getUser_id(), seg.getProject_path());
+					}
+				}).window(SlidingEventTimeWindows.of(Time.days(24), Time.seconds(10)))
+				.process(new UserStatWindowFunction<Tuple2<Integer, String>, UserProjectAggregateStat>("daily_project",
+						new UserProjectAggregateStatFactory()))
+				.returns(TypeExtractor.getForClass(UserProjectAggregateStat.class));
 
 		JdbcConnectionOptions jdbcOptions = new JdbcConnectionOptions.JdbcConnectionOptionsBuilder()
 				.withUrl("jdbc:postgresql://postgres_db:5432/myapp").withDriverName("org.postgresql.Driver")
@@ -67,6 +85,8 @@ public class FileSegmentAnalyticsJob {
 		dailyStream.addSink(createJdbcSink(jdbcOptions, 1, 0, false));
 
 		rollingStream.addSink(createJdbcSink(jdbcOptions, 1, 0, true));
+
+		projectsRollingStream.print();
 
 		env.execute("FileSegment Analytics");
 	}
@@ -126,5 +146,20 @@ public class FileSegmentAnalyticsJob {
 				JdbcExecutionOptions.builder().withBatchSize(batchSize).withBatchIntervalMs(batchIntervalMs).build(),
 				// Provide JDBC connection details
 				jdbcOptions);
+	}
+
+	public static class UserAggregateStatFactory implements StatFactory<Integer, UserAggregateStat>, Serializable {
+		@Override
+		public UserAggregateStat create(Integer key) {
+			return new UserAggregateStat(key);
+		}
+	}
+
+	public static class UserProjectAggregateStatFactory
+			implements StatFactory<Tuple2<Integer, String>, UserProjectAggregateStat>, Serializable {
+		@Override
+		public UserProjectAggregateStat create(Tuple2<Integer, String> key) {
+			return new UserProjectAggregateStat(key.f0, key.f1);
+		}
 	}
 }
