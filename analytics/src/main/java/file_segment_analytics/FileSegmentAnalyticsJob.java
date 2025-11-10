@@ -73,17 +73,6 @@ public class FileSegmentAnalyticsJob {
 
 	private static SinkFunction<UserAggregateStat> createJdbcSink(JdbcConnectionOptions jdbcOptions, int batchSize,
 			long batchIntervalMs, boolean rolling) {
-		String table = rolling ? "user_stats_rolling" : "user_stats_aggregate";
-		String conflict = rolling ? "(user_id, window_type)" : "(user_id, window_type, window_start)";
-
-		String columns = "user_id, window_type, lang_durations, machine_durations, editor_durations, project_durations, activity_durations";
-		String values = "?, ?, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb";
-
-		if (!rolling) {
-			columns += ", window_start, window_end";
-			values += ", ?, ?";
-		}
-
 		String sql;
 		if (rolling) {
 			sql = "INSERT INTO user_stats_rolling ("
@@ -99,7 +88,7 @@ public class FileSegmentAnalyticsJob {
 			sql = "INSERT INTO user_stats_aggregate ("
 					+ "user_id, window_type, lang_durations, machine_durations, editor_durations, "
 					+ "project_durations, activity_durations, window_start, window_end) "
-					+ "VALUES (?, ?, ?, ?, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb) "
+					+ "VALUES (?, ?, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?, ?)"
 					+ "ON CONFLICT (user_id, window_type, window_start) DO UPDATE SET "
 					+ "window_end = EXCLUDED.window_end, " + "lang_durations = EXCLUDED.lang_durations, "
 					+ "machine_durations = EXCLUDED.machine_durations, "
