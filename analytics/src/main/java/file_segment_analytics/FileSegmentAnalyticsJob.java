@@ -26,6 +26,7 @@ import sinks.JdbcSinkFactory;
 import stats.UserAggregateStat;
 import stats.UserRollingStat;
 import stats.UserProjectAggregateStat;
+import stats.UserProjectRollingStat;
 import stats.StatFactory;
 
 public class FileSegmentAnalyticsJob {
@@ -67,13 +68,24 @@ public class FileSegmentAnalyticsJob {
 						new UserRollingStatFactory()))
 				.returns(TypeExtractor.getForClass(UserRollingStat.class));
 
-		DataStream<UserProjectAggregateStat> projectsRollingStream = timestampedStream
+		DataStream<UserProjectRollingStat> projectsRollingStream = timestampedStream
 				.keyBy(new KeySelector<EnrichedFileSegment, Tuple2<Integer, String>>() {
 					@Override
 					public Tuple2<Integer, String> getKey(EnrichedFileSegment seg) throws Exception {
 						return Tuple2.of(seg.getUser_id(), seg.getProject_path());
 					}
-				}).window(TumblingEventTimeWindows.of(Time.days(1)))
+				}).window(SlidingEventTimeWindows.of(Time.hours(24), Time.seconds(10)))
+				.process(new UserStatWindowFunction<Tuple2<Integer, String>, UserProjectRollingStat>("rolling_24h",
+						new UserProjectRollingStatFactory()))
+				.returns(TypeExtractor.getForClass(UserProjectRollingStat.class));
+
+		DataStream<UserProjectAggregateStat> projectsAggregateStream = timestampedStream
+				.keyBy(new KeySelector<EnrichedFileSegment, Tuple2<Integer, String>>() {
+					@Override
+					public Tuple2<Integer, String> getKey(EnrichedFileSegment seg) throws Exception {
+						return Tuple2.of(seg.getUser_id(), seg.getProject_path());
+					}
+				}).window(TumblingEventTimeWindows.of(Time.hours(24)))
 				.process(new UserStatWindowFunction<Tuple2<Integer, String>, UserProjectAggregateStat>("daily",
 						new UserProjectAggregateStatFactory()))
 				.returns(TypeExtractor.getForClass(UserProjectAggregateStat.class));
@@ -95,14 +107,15 @@ public class FileSegmentAnalyticsJob {
 				"user_project_stats_aggregate", UserProjectAggregateStat.PRIMITIVE_COLUMNS,
 				UserProjectAggregateStat.JSONB_COLUMNS, String.join(", ", UserProjectAggregateStat.CONFLICT_KEYS),
 				jdbcOptions, 10, 1000);
+		SinkFunction<UserProjectRollingStat> projectRollingSink = JdbcSinkFactory.createGeneralSink(
+				"user_project_stats_Rolling", UserProjectRollingStat.PRIMITIVE_COLUMNS,
+				UserProjectRollingStat.JSONB_COLUMNS, String.join(", ", UserProjectRollingStat.CONFLICT_KEYS),
+				jdbcOptions, 10, 1000);
 
 		dailyStream.addSink(dailySink);
 		rollingStream.addSink(rollingSink);
-		projectsRollingStream.addSink(projectSink);
-
-		// Optionally print for debug
-		// rollingStream.print();
-		// projectsRollingStream.print();
+		projectsAggregateStream.addSink(projectSink);
+		projectsRollingStream.addSink(projectRollingSink);
 
 		env.execute("FileSegment Analytics");
 	}
@@ -126,6 +139,14 @@ public class FileSegmentAnalyticsJob {
 		@Override
 		public UserProjectAggregateStat create(Tuple2<Integer, String> key) {
 			return new UserProjectAggregateStat(key.f0, key.f1);
+		}
+	}
+
+	public static class UserProjectRollingStatFactory
+			implements StatFactory<Tuple2<Integer, String>, UserProjectRollingStat>, Serializable {
+		@Override
+		public UserProjectRollingStat create(Tuple2<Integer, String> key) {
+			return new UserProjectRollingStat(key.f0, key.f1);
 		}
 	}
 }

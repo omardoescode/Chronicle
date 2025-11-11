@@ -53,7 +53,6 @@ create table if not exists user_project_stats_aggregate (
 create table if not exists user_project_stats_rolling (
   user_id integer,
   project_path varchar(500) not null,
-  project_id int primary key,
   window_type text not null check (window_type in (
     'rolling_24h', 'rolling_7d', 'rolling_30d', 'rolling_365d'
   )),
@@ -68,10 +67,10 @@ create table if not exists user_project_stats_rolling (
 
 create table if not exists user_project_session (
   user_id int not null,
-  project_id int not null,
+  project_path int not null,
   window_start timestamp not null,
   window_end timestamp not null,
-  primary key (user_id, project_id, window_start)
+  primary key (user_id, project_path, window_start)
 );
 
 create table if not exists user_lang_session (
