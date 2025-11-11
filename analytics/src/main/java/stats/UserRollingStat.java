@@ -6,15 +6,13 @@ import java.util.HashMap;
 import java.util.Map;
 import models.EnrichedFileSegment;
 
-public class UserAggregateStat implements IStat {
-	public final static String[] PRIMITIVE_COLUMNS = { "user_id", "window_type", "window_start", "window_end" };
-	public final static String[] JSONB_COLUMNS = { "lang_durations", "machine_durations", "editor_durations",
+public class UserRollingStat implements IStat {
+	public static final String[] PRIMITIVE_COLUMNS = { "user_id", "window_type" };
+	public static final String[] JSONB_COLUMNS = { "lang_durations", "machine_durations", "editor_durations",
 			"project_durations", "activity_durations" };
-	public final static String CONFLICT_KEYS = "user_id, window_type, window_start";
+	public static final String[] CONFLICT_KEYS = { "user_id", "window_type" };
 	private final int user_id;
 	private long total_duration;
-	private Instant window_start;
-	private Instant window_end;
 	private String window_type;
 
 	private final HashMap<String, Long> machine_durations = new HashMap<>();
@@ -23,11 +21,9 @@ public class UserAggregateStat implements IStat {
 	private final HashMap<String, Long> project_durations = new HashMap<>();
 	private final HashMap<String, Long> activity_durations = new HashMap<>();
 
-	public UserAggregateStat(int user_id) {
+	public UserRollingStat(int user_id) {
 		this.user_id = user_id;
 		this.total_duration = 0;
-		this.window_start = null;
-		this.window_end = null;
 	}
 
 	public void setWindowType(String new_type) {
@@ -44,22 +40,6 @@ public class UserAggregateStat implements IStat {
 
 	public long getTotalDuration() {
 		return total_duration;
-	}
-
-	public Instant getWindowStart() {
-		return window_start;
-	}
-
-	public Instant getWindowEnd() {
-		return window_end;
-	}
-
-	public void setWindowStart(Instant start) {
-		this.window_start = start;
-	}
-
-	public void setWindowEnd(Instant end) {
-		this.window_end = end;
 	}
 
 	public HashMap<String, Long> getMachineDurations() {
@@ -82,21 +62,6 @@ public class UserAggregateStat implements IStat {
 		return activity_durations;
 	}
 
-	@Override
-	public Map<String, Object> asRecord() {
-		Map<String, Object> map = new HashMap<>();
-		map.put("user_id", this.user_id);
-		map.put("window_type", this.window_type);
-		map.put("lang_durations", this.language_durations);
-		map.put("machine_durations", this.machine_durations);
-		map.put("editor_durations", this.editor_durations);
-		map.put("project_durations", this.project_durations);
-		map.put("activity_durations", this.activity_durations);
-		map.put("window_start", this.window_start);
-		map.put("window_end", this.window_end);
-		return map;
-	}
-
 	public void add(EnrichedFileSegment seg) {
 		long duration = Duration.between(Instant.parse(seg.getStart_time()), Instant.parse(seg.getEnd_time()))
 				.toMillis();
@@ -117,20 +82,23 @@ public class UserAggregateStat implements IStat {
 
 		if (seg.getSegment_type() != null)
 			activity_durations.merge(seg.getSegment_type(), duration, Long::sum);
-
-		// Expand window boundaries
-		Instant start = Instant.parse(seg.getStart_time());
-		Instant end = Instant.parse(seg.getEnd_time());
-		if (window_start == null || start.isBefore(window_start))
-			window_start = start;
-		if (window_end == null || end.isAfter(window_end))
-			window_end = end;
 	}
 
 	public void postProcess(WindowContext ctx) {
 		setWindowType(ctx.getWindowType());
-		setWindowStart(ctx.getWindowStart());
-		setWindowEnd(ctx.getWindowEnd());
+	}
+
+	@Override
+	public Map<String, Object> asRecord() {
+		Map<String, Object> map = new HashMap<>();
+		map.put("user_id", this.user_id);
+		map.put("window_type", this.window_type);
+		map.put("lang_durations", this.language_durations);
+		map.put("machine_durations", this.machine_durations);
+		map.put("editor_durations", this.editor_durations);
+		map.put("project_durations", this.project_durations);
+		map.put("activity_durations", this.activity_durations);
+		return map;
 	}
 
 	//
@@ -146,10 +114,6 @@ public class UserAggregateStat implements IStat {
 		StringBuilder sb = new StringBuilder();
 		sb.append("UserDailyStat{user_id=").append(user_id).append(", total_duration=").append(total_duration)
 				.append(" ms");
-
-		if (window_start != null && window_end != null) {
-			sb.append(", window=[").append(window_start).append(" → ").append(window_end).append("]");
-		}
 
 		appendCategory(sb, "languages", language_durations);
 		appendCategory(sb, "machines", machine_durations);

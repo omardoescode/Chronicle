@@ -7,6 +7,11 @@ import java.util.Map;
 import models.EnrichedFileSegment;
 
 public class UserProjectAggregateStat implements IStat {
+	public static final String[] PRIMITIVE_COLUMNS = { "user_id", "project_path", "window_type", "window_start",
+			"window_end", };
+	public static final String[] JSONB_COLUMNS = { "lang_durations", "machine_durations", "editor_durations",
+			"activity_durations", "files_durations" };
+	public static final String[] CONFLICT_KEYS = { "user_id", "project_path", "window_type", "window_start" };
 	private final int user_id;
 	private final String project_path;
 	private long total_duration;
@@ -87,6 +92,23 @@ public class UserProjectAggregateStat implements IStat {
 
 	public HashMap<String, Long> getFilesDurations() {
 		return files_durations;
+	}
+
+	@Override
+	public Map<String, Object> asRecord() {
+		Map<String, Object> map = new HashMap<>();
+		map.put("user_id", this.user_id);
+		map.put("project_path", this.project_path);
+		map.put("window_type", this.window_type);
+		map.put("lang_durations", this.language_durations);
+		map.put("machine_durations", this.machine_durations);
+		map.put("editor_durations", this.editor_durations);
+		map.put("project_durations", this.project_durations);
+		map.put("activity_durations", this.activity_durations);
+		map.put("file_durations", this.files_durations);
+		map.put("window_start", this.window_start);
+		map.put("window_end", this.window_end);
+		return map;
 	}
 
 	public void add(EnrichedFileSegment seg) {

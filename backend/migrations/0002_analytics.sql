@@ -36,7 +36,6 @@ create table if not exists user_stats_rolling (
 create table if not exists user_project_stats_aggregate (
   user_id integer,
   project_path varchar(500) not null,
-  project_id int primary key,
   window_type text not null check (window_type in (
     'daily', 'weekly', 'monthly', 'yearly'
   )),
@@ -47,7 +46,8 @@ create table if not exists user_project_stats_aggregate (
   editor_durations jsonb,
   activity_durations jsonb,
   files_durations jsonb,
-  updated_at timestamptz default now()
+  updated_at timestamptz default now(),
+  unique (user_id, project_path, window_type, window_start)
 );
 
 create table if not exists user_project_stats_rolling (
@@ -62,7 +62,8 @@ create table if not exists user_project_stats_rolling (
   editor_durations jsonb,
   activity_durations jsonb,
   files_durations jsonb,
-  updated_at timestamptz default now()
+  updated_at timestamptz default now(),
+  unique (user_id, project_path, window_type)
 );
 
 create table if not exists user_project_session (

@@ -2,7 +2,6 @@ package file_segment_analytics;
 
 import java.io.InputStream;
 import java.io.Serializable;
-import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Properties;
@@ -13,12 +12,8 @@ import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.typeutils.TypeExtractor;
 import org.apache.flink.connector.jdbc.JdbcConnectionOptions;
-import org.apache.flink.connector.jdbc.JdbcExecutionOptions;
-import org.apache.flink.connector.jdbc.JdbcSink;
 import org.apache.flink.connector.kafka.source.KafkaSource;
 import org.apache.flink.formats.json.JsonDeserializationSchema;
-import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.core.JsonProcessingException;
-import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.sink.SinkFunction;
@@ -27,7 +22,9 @@ import org.apache.flink.streaming.api.windowing.assigners.SlidingEventTimeWindow
 import org.apache.flink.streaming.api.windowing.time.Time;
 
 import models.EnrichedFileSegment;
+import sinks.JdbcSinkFactory;
 import stats.UserAggregateStat;
+import stats.UserRollingStat;
 import stats.UserProjectAggregateStat;
 import stats.StatFactory;
 
@@ -64,11 +61,11 @@ public class FileSegmentAnalyticsJob {
 						new UserStatWindowFunction<Integer, UserAggregateStat>("daily", new UserAggregateStatFactory()))
 				.returns(TypeExtractor.getForClass(UserAggregateStat.class));
 
-		DataStream<UserAggregateStat> rollingStream = timestampedStream.keyBy(EnrichedFileSegment::getUser_id)
+		DataStream<UserRollingStat> rollingStream = timestampedStream.keyBy(EnrichedFileSegment::getUser_id)
 				.window(SlidingEventTimeWindows.of(Time.hours(24), Time.seconds(10)))
-				.process(new UserStatWindowFunction<Integer, UserAggregateStat>("rolling_24h",
-						new UserAggregateStatFactory()))
-				.returns(TypeExtractor.getForClass(UserAggregateStat.class));
+				.process(new UserStatWindowFunction<Integer, UserRollingStat>("rolling_24h",
+						new UserRollingStatFactory()))
+				.returns(TypeExtractor.getForClass(UserRollingStat.class));
 
 		DataStream<UserProjectAggregateStat> projectsRollingStream = timestampedStream
 				.keyBy(new KeySelector<EnrichedFileSegment, Tuple2<Integer, String>>() {
@@ -76,85 +73,51 @@ public class FileSegmentAnalyticsJob {
 					public Tuple2<Integer, String> getKey(EnrichedFileSegment seg) throws Exception {
 						return Tuple2.of(seg.getUser_id(), seg.getProject_path());
 					}
-				}).window(SlidingEventTimeWindows.of(Time.days(24), Time.seconds(10)))
-				.process(new UserStatWindowFunction<Tuple2<Integer, String>, UserProjectAggregateStat>("daily_project",
+				}).window(TumblingEventTimeWindows.of(Time.days(1)))
+				.process(new UserStatWindowFunction<Tuple2<Integer, String>, UserProjectAggregateStat>("daily",
 						new UserProjectAggregateStatFactory()))
 				.returns(TypeExtractor.getForClass(UserProjectAggregateStat.class));
+
+		// Use stat type definitions for columns and conflict keys
 
 		JdbcConnectionOptions jdbcOptions = new JdbcConnectionOptions.JdbcConnectionOptionsBuilder()
 				.withUrl("jdbc:postgresql://postgres_db:5432/myapp").withDriverName("org.postgresql.Driver")
 				.withUsername("admin").withPassword("secure_password").build();
 
-		dailyStream.addSink(createJdbcSink(jdbcOptions, 1, 0, false));
+		// Sinks using asRecord (createGeneralSink)
+		SinkFunction<UserAggregateStat> dailySink = JdbcSinkFactory.createGeneralSink("user_stats_aggregate",
+				UserAggregateStat.PRIMITIVE_COLUMNS, UserAggregateStat.JSONB_COLUMNS,
+				String.join(", ", UserAggregateStat.CONFLICT_KEYS), jdbcOptions, 10, 1000);
+		SinkFunction<UserRollingStat> rollingSink = JdbcSinkFactory.createGeneralSink("user_stats_rolling",
+				UserRollingStat.PRIMITIVE_COLUMNS, UserRollingStat.JSONB_COLUMNS,
+				String.join(", ", UserRollingStat.CONFLICT_KEYS), jdbcOptions, 10, 1000);
+		SinkFunction<UserProjectAggregateStat> projectSink = JdbcSinkFactory.createGeneralSink(
+				"user_project_stats_aggregate", UserProjectAggregateStat.PRIMITIVE_COLUMNS,
+				UserProjectAggregateStat.JSONB_COLUMNS, String.join(", ", UserProjectAggregateStat.CONFLICT_KEYS),
+				jdbcOptions, 10, 1000);
 
-		rollingStream.addSink(createJdbcSink(jdbcOptions, 1, 0, true));
+		dailyStream.addSink(dailySink);
+		rollingStream.addSink(rollingSink);
+		projectsRollingStream.addSink(projectSink);
 
-		projectsRollingStream.print();
+		// Optionally print for debug
+		// rollingStream.print();
+		// projectsRollingStream.print();
 
 		env.execute("FileSegment Analytics");
-	}
-
-	private static SinkFunction<UserAggregateStat> createJdbcSink(JdbcConnectionOptions jdbcOptions, int batchSize,
-			long batchIntervalMs, boolean rolling) {
-		String sql;
-		if (rolling) {
-			sql = "INSERT INTO user_stats_rolling ("
-					+ "user_id, window_type, lang_durations, machine_durations, editor_durations, "
-					+ "project_durations, activity_durations) "
-					+ "VALUES (?, ?, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb) "
-					+ "ON CONFLICT (user_id, window_type) DO UPDATE SET " + "lang_durations = EXCLUDED.lang_durations, "
-					+ "machine_durations = EXCLUDED.machine_durations, "
-					+ "editor_durations = EXCLUDED.editor_durations, "
-					+ "project_durations = EXCLUDED.project_durations, "
-					+ "activity_durations = EXCLUDED.activity_durations, " + "updated_at = NOW();";
-		} else {
-			sql = "INSERT INTO user_stats_aggregate ("
-					+ "user_id, window_type, lang_durations, machine_durations, editor_durations, "
-					+ "project_durations, activity_durations, window_start, window_end) "
-					+ "VALUES (?, ?, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?, ?)"
-					+ "ON CONFLICT (user_id, window_type, window_start) DO UPDATE SET "
-					+ "window_end = EXCLUDED.window_end, " + "lang_durations = EXCLUDED.lang_durations, "
-					+ "machine_durations = EXCLUDED.machine_durations, "
-					+ "editor_durations = EXCLUDED.editor_durations, "
-					+ "project_durations = EXCLUDED.project_durations, "
-					+ "activity_durations = EXCLUDED.activity_durations, " + "updated_at = NOW();";
-		}
-
-		return JdbcSink.sink(sql, (ps, stat) -> {
-			ObjectMapper mapper = new ObjectMapper();
-			UserAggregateStat userStat = (UserAggregateStat) stat;
-			ps.setInt(1, userStat.getUserId());
-			ps.setString(2, stat.getWindowType());
-
-			if (!rolling) {
-				ps.setTimestamp(8, Timestamp.from(userStat.getWindowStart()));
-				ps.setTimestamp(9, Timestamp.from(userStat.getWindowEnd()));
-			}
-
-			try {
-				// 5-9: Serialize Map fields to JSON strings
-				ps.setString(3, mapper.writeValueAsString(userStat.getLangDurations()));
-				ps.setString(4, mapper.writeValueAsString(userStat.getMachineDurations()));
-				ps.setString(5, mapper.writeValueAsString(userStat.getEditorDurations()));
-				ps.setString(6, mapper.writeValueAsString(userStat.getProjectDurations()));
-				ps.setString(7, mapper.writeValueAsString(userStat.getActivityDurations()));
-			} catch (JsonProcessingException e) {
-				// Handle serialization error gracefully
-				e.printStackTrace();
-				for (int i = 3; i <= 7; i++)
-					ps.setString(i, "{}"); // Send empty JSON object on error
-			}
-		},
-				// Define execution options (batching)
-				JdbcExecutionOptions.builder().withBatchSize(batchSize).withBatchIntervalMs(batchIntervalMs).build(),
-				// Provide JDBC connection details
-				jdbcOptions);
 	}
 
 	public static class UserAggregateStatFactory implements StatFactory<Integer, UserAggregateStat>, Serializable {
 		@Override
 		public UserAggregateStat create(Integer key) {
 			return new UserAggregateStat(key);
+		}
+	}
+
+	public static class UserRollingStatFactory implements StatFactory<Integer, UserRollingStat>, Serializable {
+		@Override
+		public UserRollingStat create(Integer key) {
+			return new UserRollingStat(key);
 		}
 	}
 
