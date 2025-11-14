@@ -1,4 +1,4 @@
-package file_segment_analytics;
+package stats;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -6,8 +6,12 @@ import java.util.HashMap;
 import java.util.Map;
 import models.EnrichedFileSegment;
 
-public class UserAggregateStat {
-	private int user_id;
+public class UserAggregateStat implements IStat {
+	public final static String[] PRIMITIVE_COLUMNS = { "user_id", "window_type", "window_start", "window_end" };
+	public final static String[] JSONB_COLUMNS = { "lang_durations", "machine_durations", "editor_durations",
+			"project_durations", "activity_durations" };
+	public final static String CONFLICT_KEYS = "user_id, window_type, window_start";
+	private final int user_id;
 	private long total_duration;
 	private Instant window_start;
 	private Instant window_end;
@@ -78,6 +82,21 @@ public class UserAggregateStat {
 		return activity_durations;
 	}
 
+	@Override
+	public Map<String, Object> asRecord() {
+		Map<String, Object> map = new HashMap<>();
+		map.put("user_id", this.user_id);
+		map.put("window_type", this.window_type);
+		map.put("lang_durations", this.language_durations);
+		map.put("machine_durations", this.machine_durations);
+		map.put("editor_durations", this.editor_durations);
+		map.put("project_durations", this.project_durations);
+		map.put("activity_durations", this.activity_durations);
+		map.put("window_start", this.window_start);
+		map.put("window_end", this.window_end);
+		return map;
+	}
+
 	public void add(EnrichedFileSegment seg) {
 		long duration = Duration.between(Instant.parse(seg.getStart_time()), Instant.parse(seg.getEnd_time()))
 				.toMillis();
@@ -108,28 +127,19 @@ public class UserAggregateStat {
 			window_end = end;
 	}
 
-	public void remove(EnrichedFileSegment seg) {
-		long duration = Duration.between(Instant.parse(seg.getStart_time()), Instant.parse(seg.getEnd_time()))
-				.toMillis();
-		this.total_duration -= duration;
-
-		subtractOrRemove(language_durations, seg.getLang(), duration);
-		subtractOrRemove(machine_durations, seg.getMachine_name() != null ? seg.getMachine_name() : seg.getMachine_os(),
-				duration);
-		subtractOrRemove(project_durations,
-				seg.getProject_name() != null ? seg.getProject_name() : seg.getProject_path(), duration);
-		subtractOrRemove(activity_durations, seg.getSegment_type(), duration);
-		subtractOrRemove(editor_durations, seg.getEditor(), duration);
+	public void postProcess(WindowContext ctx) {
+		setWindowType(ctx.getWindowType());
+		setWindowStart(ctx.getWindowStart());
+		setWindowEnd(ctx.getWindowEnd());
 	}
 
-	private void subtractOrRemove(HashMap<String, Long> map, String key, long duration) {
-		if (key == null)
-			return;
-		map.computeIfPresent(key, (k, v) -> {
-			long newVal = v - duration;
-			return newVal <= 0 ? null : newVal;
-		});
-	}
+	//
+	// public void remove(EnrichedFileSegment seg) {
+	// long duration = Duration.between(Instant.parse(seg.getStart_time()),
+	// Instant.parse(seg.getEnd_time()))
+	// .toMillis();
+	// this.total_duration -= duration;
+	// }
 
 	@Override
 	public String toString() {
