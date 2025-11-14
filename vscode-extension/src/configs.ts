@@ -1,11 +1,14 @@
 import * as fs from 'fs'
+import path from 'path'
 
 export class ChronicleConfig {
-  private configFile: string = 'chronicle-config.json'
-  private logFile: string = 'chronicle-log.txt'
+  private configFile: string = ''
+  private logFile: string = ''
   private configData: any = {}
 
-  constructor() {
+  constructor(configDir: string, logDir: string) {
+    this.configFile = path.join(configDir, 'chronicle-config.json')
+    this.logFile = path.join(logDir, 'chronicle-log.txt')
     this.loadConfig()
   }
 

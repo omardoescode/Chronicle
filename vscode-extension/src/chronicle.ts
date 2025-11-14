@@ -31,8 +31,8 @@ export class Chronicle {
   private isAIEditing: boolean = false
   private debuggingAllowed: boolean = false
 
-  constructor() {
-    this.config = new ChronicleConfig()
+  constructor(globalStorageDir: string, logDir: string) {
+    this.config = new ChronicleConfig(globalStorageDir, logDir)
   }
 
   public async initialize() {
