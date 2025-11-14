@@ -7,15 +7,14 @@ import java.util.Map;
 import models.EnrichedFileSegment;
 
 public class UserAggregateStat implements IStat {
-	public final static String[] PRIMITIVE_COLUMNS = { "user_id", "window_type", "window_start", "window_end" };
+	public final static String[] PRIMITIVE_COLUMNS = { "user_id", "window_start", "window_end" };
 	public final static String[] JSONB_COLUMNS = { "lang_durations", "machine_durations", "editor_durations",
 			"project_durations", "activity_durations" };
-	public final static String CONFLICT_KEYS = "user_id, window_type, window_start";
+	public final static String CONFLICT_KEYS = "user_id, window_start";
 	private final int user_id;
 	private long total_duration;
 	private Instant window_start;
 	private Instant window_end;
-	private String window_type;
 
 	private final HashMap<String, Long> machine_durations = new HashMap<>();
 	private final HashMap<String, Long> language_durations = new HashMap<>();
@@ -28,14 +27,6 @@ public class UserAggregateStat implements IStat {
 		this.total_duration = 0;
 		this.window_start = null;
 		this.window_end = null;
-	}
-
-	public void setWindowType(String new_type) {
-		this.window_type = new_type;
-	}
-
-	public String getWindowType() {
-		return this.window_type;
 	}
 
 	public int getUserId() {
@@ -86,7 +77,6 @@ public class UserAggregateStat implements IStat {
 	public Map<String, Object> asRecord() {
 		Map<String, Object> map = new HashMap<>();
 		map.put("user_id", this.user_id);
-		map.put("window_type", this.window_type);
 		map.put("lang_durations", this.language_durations);
 		map.put("machine_durations", this.machine_durations);
 		map.put("editor_durations", this.editor_durations);
@@ -128,7 +118,6 @@ public class UserAggregateStat implements IStat {
 	}
 
 	public void postProcess(WindowContext ctx) {
-		setWindowType(ctx.getWindowType());
 		setWindowStart(ctx.getWindowStart());
 		setWindowEnd(ctx.getWindowEnd());
 	}

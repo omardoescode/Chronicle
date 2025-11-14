@@ -3,25 +3,19 @@ package stats;
 import java.time.Instant;
 
 public final class WindowContext {
-	private final String windowType;
-	private final Instant windowStart;
-	private final Instant windowEnd;
+  private final Instant windowStart;
+  private final Instant windowEnd;
 
-	public WindowContext(String windowType, Instant windowStart, Instant windowEnd) {
-		this.windowType = windowType;
-		this.windowStart = windowStart;
-		this.windowEnd = windowEnd;
-	}
+  public WindowContext(Instant windowStart, Instant windowEnd) {
+    this.windowStart = windowStart;
+    this.windowEnd = windowEnd;
+  }
 
-	public String getWindowType() {
-		return windowType;
-	}
+  public Instant getWindowStart() {
+    return windowStart;
+  }
 
-	public Instant getWindowStart() {
-		return windowStart;
-	}
-
-	public Instant getWindowEnd() {
-		return windowEnd;
-	}
+  public Instant getWindowEnd() {
+    return windowEnd;
+  }
 }

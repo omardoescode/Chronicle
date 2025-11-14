@@ -7,13 +7,12 @@ import java.util.Map;
 import models.EnrichedFileSegment;
 
 public class UserRollingStat implements IStat {
-	public static final String[] PRIMITIVE_COLUMNS = { "user_id", "window_type" };
+	public static final String[] PRIMITIVE_COLUMNS = { "user_id" };
 	public static final String[] JSONB_COLUMNS = { "lang_durations", "machine_durations", "editor_durations",
 			"project_durations", "activity_durations" };
-	public static final String[] CONFLICT_KEYS = { "user_id", "window_type" };
+	public static final String[] CONFLICT_KEYS = { "user_id" };
 	private final int user_id;
 	private long total_duration;
-	private String window_type;
 
 	private final HashMap<String, Long> machine_durations = new HashMap<>();
 	private final HashMap<String, Long> language_durations = new HashMap<>();
@@ -24,14 +23,6 @@ public class UserRollingStat implements IStat {
 	public UserRollingStat(int user_id) {
 		this.user_id = user_id;
 		this.total_duration = 0;
-	}
-
-	public void setWindowType(String new_type) {
-		this.window_type = new_type;
-	}
-
-	public String getWindowType() {
-		return this.window_type;
 	}
 
 	public int getUserId() {
@@ -85,14 +76,12 @@ public class UserRollingStat implements IStat {
 	}
 
 	public void postProcess(WindowContext ctx) {
-		setWindowType(ctx.getWindowType());
 	}
 
 	@Override
 	public Map<String, Object> asRecord() {
 		Map<String, Object> map = new HashMap<>();
 		map.put("user_id", this.user_id);
-		map.put("window_type", this.window_type);
 		map.put("lang_durations", this.language_durations);
 		map.put("machine_durations", this.machine_durations);
 		map.put("editor_durations", this.editor_durations);

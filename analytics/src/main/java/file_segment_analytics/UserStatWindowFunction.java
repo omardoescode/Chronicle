@@ -11,28 +11,26 @@ import org.apache.flink.util.Collector;
 import java.time.Instant;
 
 public class UserStatWindowFunction<K, S extends IStat>
-		extends ProcessWindowFunction<EnrichedFileSegment, S, K, TimeWindow> {
+    extends ProcessWindowFunction<EnrichedFileSegment, S, K, TimeWindow> {
 
-	private final String windowType;
-	private final StatFactory<K, S> stat_factory;
+  private final StatFactory<K, S> stat_factory;
 
-	public UserStatWindowFunction(String windowType, StatFactory<K, S> factory) {
-		this.windowType = windowType;
-		this.stat_factory = factory;
-	}
+  public UserStatWindowFunction(StatFactory<K, S> factory) {
+    this.stat_factory = factory;
+  }
 
-	@Override
-	public void process(K key, Context ctx, Iterable<EnrichedFileSegment> segments, Collector<S> out) {
-		S stat = stat_factory.create(key);
-		for (EnrichedFileSegment seg : segments) {
-			stat.add(seg);
-		}
+  @Override
+  public void process(K key, Context ctx, Iterable<EnrichedFileSegment> segments, Collector<S> out) {
+    S stat = stat_factory.create(key);
+    for (EnrichedFileSegment seg : segments) {
+      stat.add(seg);
+    }
 
-		WindowContext windowContext = new WindowContext(windowType, Instant.ofEpochMilli(ctx.window().getStart()),
-				Instant.ofEpochMilli(ctx.window().getEnd()));
+    WindowContext windowContext = new WindowContext(Instant.ofEpochMilli(ctx.window().getStart()),
+        Instant.ofEpochMilli(ctx.window().getEnd()));
 
-		stat.postProcess(windowContext);
+    stat.postProcess(windowContext);
 
-		out.collect(stat);
-	}
+    out.collect(stat);
+  }
 }
