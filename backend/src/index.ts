@@ -19,11 +19,7 @@ import {
 } from "./heartbeat/validation";
 import * as heartbeat from "./heartbeat/service";
 import * as analytics from "./analytics/service";
-import {
-  WindowSchema,
-  WindowSchemaInputType,
-  WindowSchemaType,
-} from "./analytics/validation";
+import { WindowSchema, WindowSchemaInputType } from "./analytics/validation";
 import { UserAnalytics } from "./analytics/types";
 
 export const graphql = {
