@@ -25,6 +25,7 @@ export class ChronicleConfig {
     } catch (error) {
       console.error('Error loading config:', error)
       this.configData = {}
+      this.saveConfig(this.configData)
     }
   }
 
