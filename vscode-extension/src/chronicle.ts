@@ -149,6 +149,10 @@ export class Chronicle {
           )
         }
 
+        if (error.cause[0].includes('METADATA_EXISTS')) {
+          return
+        }
+
         this.config?.log(
           'Error sending API metadata: ' +
             error.message +
