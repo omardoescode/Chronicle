@@ -16,7 +16,7 @@
     "publication.name": "debezium_publication",
     "slot.drop.on.stop": false,
 
-    "table.include.list": "public.projects,public.project_files,public.file_segments",
+    "table.include.list": "public.users,public.projects,public.project_files,public.file_segments",
     "transforms": "route",
     "transforms.route.type": "org.apache.kafka.connect.transforms.RegexRouter",
     "transforms.route.regex": "postgres-server\\.public\\.(.*)",

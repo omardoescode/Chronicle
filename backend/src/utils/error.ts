@@ -23,3 +23,9 @@ export class AppError extends Error {
     Error.captureStackTrace?.(this, this.constructor);
   }
 }
+
+export class InternalServerError extends AppError {
+  constructor() {
+    super("Internal Server Error");
+  }
+}

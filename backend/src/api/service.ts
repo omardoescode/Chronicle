@@ -46,6 +46,7 @@ const setApiMetadata = async (
   const client = await pool.connect();
   try {
     await client.query("begin transaction");
+    console.log(`setting ${api_key}`);
     const res = await db.setAPIMetadata(
       client,
       api_key,
