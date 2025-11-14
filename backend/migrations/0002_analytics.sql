@@ -7,6 +7,7 @@ create table if not exists user_stats_aggregate_daily (
   editor_durations jsonb default '{}'::jsonb,
   project_durations jsonb default '{}'::jsonb,
   activity_durations jsonb default '{}'::jsonb,
+  work_duration_ms integer not null,
   created_at timestamptz default now(),
   updated_at timestamptz default now(),
   primary key (user_id, window_start)
@@ -19,6 +20,7 @@ create table if not exists user_stats_rolling_day (
   editor_durations jsonb default '{}'::jsonb,
   project_durations jsonb default '{}'::jsonb,
   activity_durations jsonb default '{}'::jsonb,
+  work_duration_ms integer not null, 
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -33,6 +35,7 @@ create table if not exists user_project_stats_aggregate_daily (
   editor_durations jsonb,
   activity_durations jsonb,
   files_durations jsonb,
+  work_duration_ms integer not null, 
   updated_at timestamptz default now(),
   unique (user_id, project_path, window_start)
 );
@@ -45,6 +48,7 @@ create table if not exists user_project_stats_rolling_day (
   editor_durations jsonb,
   activity_durations jsonb,
   files_durations jsonb,
+  work_duration_ms integer not null, 
   updated_at timestamptz default now(),
   unique (user_id, project_path)
 );
@@ -54,6 +58,7 @@ create table if not exists user_project_session (
   project_path int not null,
   window_start timestamp not null,
   window_end timestamp not null,
+  work_duration_ms integer not null, 
   primary key (user_id, project_path, window_start)
 );
 
@@ -62,5 +67,6 @@ create table if not exists user_lang_session (
   lang text,
   window_start timestamp not null,
   window_end timestamp not null,
+  work_duration_ms integer not null, 
   primary key (user_id, lang, window_start)
 );

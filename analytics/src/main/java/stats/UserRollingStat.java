@@ -7,7 +7,7 @@ import java.util.Map;
 import models.EnrichedFileSegment;
 
 public class UserRollingStat implements IStat {
-	public static final String[] PRIMITIVE_COLUMNS = { "user_id" };
+	public static final String[] PRIMITIVE_COLUMNS = { "user_id", "work_duration_ms" };
 	public static final String[] JSONB_COLUMNS = { "lang_durations", "machine_durations", "editor_durations",
 			"project_durations", "activity_durations" };
 	public static final String[] CONFLICT_KEYS = { "user_id" };
@@ -82,6 +82,7 @@ public class UserRollingStat implements IStat {
 	public Map<String, Object> asRecord() {
 		Map<String, Object> map = new HashMap<>();
 		map.put("user_id", this.user_id);
+		map.put("work_duration_ms", this.total_duration);
 		map.put("lang_durations", this.language_durations);
 		map.put("machine_durations", this.machine_durations);
 		map.put("editor_durations", this.editor_durations);

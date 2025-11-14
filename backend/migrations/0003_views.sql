@@ -35,6 +35,7 @@ create or replace function user_analytics_aggregate_period(
 returns table (
     window_start timestamptz,
     window_end timestamptz,
+    work_duration_ms integer,
     lang_durations jsonb,
     machine_durations jsonb,
     editor_durations jsonb,
@@ -50,7 +51,8 @@ returns table (
             d.machine_durations,
             d.editor_durations,
             d.project_durations,
-            d.activity_durations
+            d.activity_durations,
+            d.work_duration_ms work_duration_ms
         from user_stats_aggregate_daily d
         where d.user_id = user_id
           and d.window_start >= p_start
@@ -66,7 +68,8 @@ returns table (
             r.machine_durations,
             r.editor_durations,
             r.project_durations,
-            r.activity_durations
+            r.activity_durations,
+            r.work_duration_ms work_duration_ms
         from user_stats_rolling_day r
         where r.user_id = user_id
           and p_start + p_interval > now() - interval '24 hours'
@@ -74,6 +77,7 @@ returns table (
     select
         min(window_start) as window_start,
         max(window_end) as window_end,
+        sum(work_duration_ms) as work_duration_ms,
         jsonb_sum_aggregate(array_agg(lang_durations)) as lang_durations,
         jsonb_sum_aggregate(array_agg(machine_durations)) as machine_durations,
         jsonb_sum_aggregate(array_agg(editor_durations)) as editor_durations,
@@ -98,6 +102,7 @@ create or replace function user_project_analytics_aggregate_period(
 returns table (
     window_start timestamptz,
     window_end timestamptz,
+    work_duration_ms integer,
     lang_durations jsonb,
     machine_durations jsonb,
     editor_durations jsonb,
@@ -113,7 +118,8 @@ returns table (
             d.machine_durations,
             d.editor_durations,
             d.activity_durations,
-            d.files_durations
+            d.files_durations,
+            d.work_duration_ms work_duration_ms
         from user_project_stats_aggregate_daily d
         where d.user_id = user_id
           and d.project_path = project_path
@@ -130,7 +136,8 @@ returns table (
             r.machine_durations,
             r.editor_durations,
             r.activity_durations,
-            r.files_durations
+            r.files_durations,
+            r.work_duration_ms work_duration_ms
         from user_project_stats_rolling_day r
         where r.user_id = user_id
           and r.project_path = project_path
@@ -139,6 +146,7 @@ returns table (
     select
         min(window_start) as window_start,
         max(window_end) as window_end,
+        sum(work_duration_ms) as work_duration_ms,
         jsonb_sum_aggregate(array_agg(lang_durations)) as lang_durations,
         jsonb_sum_aggregate(array_agg(machine_durations)) as machine_durations,
         jsonb_sum_aggregate(array_agg(editor_durations)) as editor_durations,

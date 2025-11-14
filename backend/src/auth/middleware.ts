@@ -22,6 +22,7 @@ export function authorized<TArgs extends unknown[], TReturn>(
       const payload = await verifyToken(token);
       user = UserSchema.parse(payload);
     } catch (_err) {
+      console.log(_err);
       return errToResponse(new InvalidToken());
     }
 
