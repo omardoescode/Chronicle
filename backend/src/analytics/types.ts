@@ -11,4 +11,5 @@ export type UserAnalytics = Prettify<{
   activity_durations: Duration;
   machine_durations: Duration;
   work_duration_ms: number;
+  active_days: number;
 }>;

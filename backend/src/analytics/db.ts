@@ -11,10 +11,9 @@ const getUserAnalytics = async (
   const { count, unit } = window.interval;
   const interval = `${count} ${unit}`;
   const data = await client.query({
-    text: `select lang_durations, machine_durations, editor_durations, project_durations, activity_durations, work_duration_ms from user_analytics_aggregate_period($1, $2, $3::interval)`,
+    text: `select lang_durations, machine_durations, editor_durations, project_durations, activity_durations, work_duration_ms, active_days from user_analytics_aggregate_period($1, $2, $3::interval)`,
     values: [user_id, window.start, interval],
   });
-  console.log(data.rows[0]);
   return data.rows[0];
 };
 const db = { getUserAnalytics };
