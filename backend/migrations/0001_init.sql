@@ -3,9 +3,6 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'editor') THEN
     CREATE TYPE editor AS ENUM ('vscode', 'unknown');
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'lang') THEN
-    CREATE TYPE Lang AS ENUM ('abap', 'bat', 'bibtex', 'clojure', 'coffeescript', 'c', 'cpp', 'csharp', 'dockercompose', 'css', 'cuda-cpp', 'd', 'dart', 'diff', 'dockerfile', 'erlang', 'fsharp',  'go', 'groovy', 'handlebars', 'haml', 'haskell', 'html', 'ini', 'java', 'javascript', 'javascriptreact', 'json', 'jsonc', 'julia', 'latex', 'less', 'lua', 'makefile', 'markdown', 'objective-c', 'objective-cpp', 'ocaml', 'pascal', 'perl', 'perl6', 'php', 'plaintext', 'powershell', 'jade', 'pug', 'python', 'r', 'razor', 'ruby', 'rust', 'scss', 'sass', 'shaderlab', 'shellscript', 'slim', 'sql', 'stylus', 'svelte', 'swift', 'typescript', 'typescriptreact', 'tex', 'vb', 'vue', 'vue-html', 'xml', 'xsl', 'yaml');
-  END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'segmenttype') THEN
     CREATE TYPE SegmentType AS ENUM ('coding', 'debugging', 'ai-coding');
   END IF;
@@ -56,7 +53,7 @@ create table if not exists project_files (
 
   file_path varchar(500) not null, -- This is the path relative to the project path
   file_name text generated always as (regexp_replace(file_path, '^.*[\\/]', '')) stored,
-  lang Lang,
+  lang varchar(255),
 
   constraint unique_file unique (user_id, project_path, file_path) include (file_id)
 );
