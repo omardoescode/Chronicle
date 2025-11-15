@@ -27,7 +27,7 @@ create table if not exists user_stats_rolling_day (
 
 create table if not exists user_project_stats_aggregate_daily (
   user_id integer,
-  project_path varchar(500) not null,
+  project_path text not null,
   window_start timestamp not null,
   window_end timestamp not null,
   lang_durations jsonb,
@@ -42,7 +42,7 @@ create table if not exists user_project_stats_aggregate_daily (
 
 create table if not exists user_project_stats_rolling_day (
   user_id integer,
-  project_path varchar(500) not null,
+  project_path text not null,
   lang_durations jsonb,
   machine_durations jsonb,
   editor_durations jsonb,
@@ -55,10 +55,11 @@ create table if not exists user_project_stats_rolling_day (
 
 create table if not exists user_project_session (
   user_id int not null,
-  project_path int not null,
+  project_path text not null,
   window_start timestamp not null,
   window_end timestamp not null,
   work_duration_ms integer not null, 
+  updated_at timestamptz default now(),
   primary key (user_id, project_path, window_start)
 );
 
@@ -68,5 +69,6 @@ create table if not exists user_lang_session (
   window_start timestamp not null,
   window_end timestamp not null,
   work_duration_ms integer not null, 
+  updated_at timestamptz default now(),
   primary key (user_id, lang, window_start)
 );

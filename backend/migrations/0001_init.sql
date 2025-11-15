@@ -36,7 +36,7 @@ create table if not exists api_key (
 );
 
 create table if not exists projects (
-  project_path varchar(500) not null,
+  project_path text not null,
   project_name text generated always as (regexp_replace(project_path, '^.*[\\/]', '')) stored,
   user_id integer references users(user_id),
   primary key (user_id, project_path),
