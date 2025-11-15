@@ -278,8 +278,8 @@ export class Chronicle {
     if (!this.focusedFile) return
 
     const segment: HeartbeatSegment = {
-      start_time: new Date(this.focusedFileAt).toUTCString(),
-      end_time: end_time.toUTCString(),
+      start_time: new Date(this.focusedFileAt),
+      end_time: end_time,
       segment_type: this.isAIEditing
         ? 'ai_coding'
         : this.isDebugging

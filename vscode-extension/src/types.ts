@@ -6,8 +6,8 @@ export interface ApiMetadataRequestBody {
 }
 
 export interface HeartbeatSegment {
-  start_time: string
-  end_time: string
+  start_time: Date
+  end_time: Date
   segment_type: 'coding' | 'debugging' | string
   human_line_changes: number
   ai_line_changes: number
