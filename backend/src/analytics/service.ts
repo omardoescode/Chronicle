@@ -1,8 +1,9 @@
 import { User } from "@/auth/validation";
 import pool from "@/pool";
-import { UserAnalytics } from "./types";
+import { NormalizedUserSession, UserAnalytics } from "./types";
 import { WindowSchemaType } from "./validation";
 import db from "./db";
+import { normalizeSession } from "./utils";
 
 const getUserAnalytics = async (
   user_id: User["user_id"],
@@ -18,4 +19,39 @@ const getUserAnalytics = async (
   }
 };
 
-export { getUserAnalytics };
+const getUserLangSessions = async (
+  user_id: User["user_id"],
+  window: WindowSchemaType
+): Promise<NormalizedUserSession<{ lang: string }>[]> => {
+  const client = await pool.connect();
+
+  try {
+    const data = await db.getOverlappingUserLangSessions(
+      client,
+      user_id,
+      window
+    );
+    return data.map(normalizeSession);
+  } finally {
+    client.release();
+  }
+};
+
+const getUserProjectSessions = async (
+  user_id: User["user_id"],
+  window: WindowSchemaType
+): Promise<NormalizedUserSession<{ project_path: string }>[]> => {
+  const client = await pool.connect();
+
+  try {
+    const data = await db.getOverlappingUserProjectSessions(
+      client,
+      user_id,
+      window
+    );
+    return data.map(normalizeSession);
+  } finally {
+    client.release();
+  }
+};
+export { getUserAnalytics, getUserProjectSessions, getUserLangSessions };

@@ -13,3 +13,15 @@ export type UserAnalytics = Prettify<{
   work_duration_ms: number;
   active_days: number;
 }>;
+
+export type UserSession<T> = T & {
+  window_start: Date;
+  window_end: Date;
+  work_duration_ms: number;
+};
+
+export type NormalizedUserSession<T> = T & {
+  window_start: string;
+  window_end: string;
+  work_duration_ms: number;
+};

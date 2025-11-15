@@ -20,7 +20,7 @@ import {
 import * as heartbeat from "./heartbeat/service";
 import * as analytics from "./analytics/service";
 import { WindowSchema, WindowSchemaInputType } from "./analytics/validation";
-import { UserAnalytics } from "./analytics/types";
+import { NormalizedUserSession, UserAnalytics } from "./analytics/types";
 
 export const graphql = {
   Query: {
@@ -41,6 +41,46 @@ export const graphql = {
           parsed_window.data
         );
         return SuccessResponse<UserAnalytics>(data);
+      }
+    ),
+    UserLangSessions: authorized(
+      async (
+        user,
+        window: WindowSchemaInputType
+      ): Promise<AppResponse<NormalizedUserSession<{ lang: string }>[]>> => {
+        // validate first
+        const parsed_window = WindowSchema.safeParse(window);
+        if (parsed_window.error) {
+          return ErrorResponse(
+            parsed_window.error.issues.map((x) => x.message)
+          );
+        }
+        const data = await analytics.getUserLangSessions(
+          user.user_id,
+          parsed_window.data
+        );
+        return SuccessResponse(data);
+      }
+    ),
+    UserProjectSessions: authorized(
+      async (
+        user,
+        window: WindowSchemaInputType
+      ): Promise<
+        AppResponse<NormalizedUserSession<{ project_path: string }>[]>
+      > => {
+        // validate first
+        const parsed_window = WindowSchema.safeParse(window);
+        if (parsed_window.error) {
+          return ErrorResponse(
+            parsed_window.error.issues.map((x) => x.message)
+          );
+        }
+        const data = await analytics.getUserProjectSessions(
+          user.user_id,
+          parsed_window.data
+        );
+        return SuccessResponse(data);
       }
     ),
   },
