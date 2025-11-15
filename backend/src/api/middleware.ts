@@ -4,7 +4,7 @@ import { AppResponse, errToResponse } from "@/utils/responses";
 import { getContext } from "@getcronit/pylon";
 import { ApiKey, ApiKeySchema } from "./validation";
 import { getUserByApi } from "./db";
-import { AppError } from "@/utils/error";
+import { AppError, InternalServerError } from "@/utils/error";
 import { InvalidApi } from "./errors";
 import pool from "@/pool";
 
@@ -24,6 +24,11 @@ export function withApi<TArgs extends unknown[], TReturn>(
     client.release();
     if (user instanceof AppError) return errToResponse(user); // NOTE: ! this doens't feel right?
 
-    return await fn(user, parsed.data, ...args);
+    try {
+      return await fn(user, parsed.data, ...args);
+    } catch (err) {
+      console.error(err);
+      return errToResponse(new InternalServerError());
+    }
   };
 }

@@ -95,7 +95,7 @@ services:
       - mynet
 
   jobmanager:
-    build: .
+    build: ./flink
     ports:
       - "8081:8081"
     command: jobmanager
@@ -107,15 +107,15 @@ services:
         jobmanager.rpc.address: jobmanager
         state.backend: hashmap
         state.checkpoints.dir: file:///tmp/flink-checkpoints
-        heartbeat.interval: 1000
-        heartbeat.timeout: 5000
+        heartbeat.interval: 5000
+        heartbeat.timeout: 60000
         rest.flamegraph.enabled: true
         web.backpressure.refresh-interval: 10000
     networks:
       - mynet
 
   taskmanager:
-    build: .
+    build: ./flink
     depends_on:
       - jobmanager
     command: taskmanager
@@ -130,6 +130,22 @@ services:
         state.checkpoints.dir: file:///tmp/flink-checkpoints
         heartbeat.interval: 1000
         heartbeat.timeout: 5000
+    networks:
+      - mynet
+
+  analytics_job:
+    build: ./analytics/
+    depends_on:
+      - jobmanager
+      - kafka
+    command: >
+      bash -c "
+        echo 'Waiting for JobManager...';
+        sleep 5;
+        /opt/flink/bin/flink run \
+          -m jobmanager:8081 \
+          /opt/flink/usrlib/*.jar
+      "
     networks:
       - mynet
 

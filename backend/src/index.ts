@@ -18,10 +18,31 @@ import {
   ProjectSessionSchema,
 } from "./heartbeat/validation";
 import * as heartbeat from "./heartbeat/service";
+import * as analytics from "./analytics/service";
+import { WindowSchema, WindowSchemaInputType } from "./analytics/validation";
+import { UserAnalytics } from "./analytics/types";
 
 export const graphql = {
   Query: {
-    hello: authorized(async (user) => SuccessResponse({ ...user })),
+    UserAnaltyics: authorized(
+      async (
+        user,
+        window: WindowSchemaInputType
+      ): Promise<AppResponse<UserAnalytics>> => {
+        // validate first
+        const parsed_window = WindowSchema.safeParse(window);
+        if (parsed_window.error) {
+          return ErrorResponse(
+            parsed_window.error.issues.map((x) => x.message)
+          );
+        }
+        const data = await analytics.getUserAnalytics(
+          user.user_id,
+          parsed_window.data
+        );
+        return SuccessResponse<UserAnalytics>(data);
+      }
+    ),
   },
   Mutation: {
     async login(
