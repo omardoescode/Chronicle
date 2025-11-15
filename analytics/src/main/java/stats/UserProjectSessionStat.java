@@ -8,7 +8,8 @@ import java.util.Map;
 import models.EnrichedFileSegment;
 
 public class UserProjectSessionStat implements IStat {
-	public static final String[] PRIMITIVE_COLUMNS = { "user_id", "project_path", "window_start", "window_end", };
+	public static final String[] PRIMITIVE_COLUMNS = { "user_id", "project_path", "window_start", "window_end",
+			"work_duration_ms" };
 	public static final String[] JSONB_COLUMNS = {};
 	public static final String CONFLICT_KEYS = "user_id, project_path, window_start";
 

@@ -1,6 +1,6 @@
 import { User } from "@/auth/validation";
 import { PoolClient } from "pg";
-import { UserAnalytics, UserProjectSession, UserSession } from "./types";
+import { UserAnalytics, UserSession } from "./types";
 import { WindowSchemaType } from "./validation";
 
 const getUserAnalytics = async (

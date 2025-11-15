@@ -83,7 +83,7 @@ public class FileSegmentAnalyticsJob {
 		DataStream<UserProjectAggregateStat> projectsAggregateStream = timestampedStream
 				.keyBy(new KeySelector<EnrichedFileSegment, Tuple2<Integer, String>>() {
 					@Override
-					public Tuple2<Integer, String> getKey(EnrichedFileSegment seg) throws Exception {
+					public Tuple2<Integer, String> getKey(EnrichedFileSegment seg) {
 						return Tuple2.of(seg.getUser_id(), seg.getProject_path());
 					}
 				}).window(TumblingEventTimeWindows.of(Time.hours(24)))
@@ -94,10 +94,10 @@ public class FileSegmentAnalyticsJob {
 		DataStream<UserProjectSessionStat> projectSessionStream = timestampedStream
 				.keyBy(new KeySelector<EnrichedFileSegment, Tuple2<Integer, String>>() {
 					@Override
-					public Tuple2<Integer, String> getKey(EnrichedFileSegment seg) throws Exception {
+					public Tuple2<Integer, String> getKey(EnrichedFileSegment seg) {
 						return Tuple2.of(seg.getUser_id(), seg.getProject_path());
 					}
-				}).window(EventTimeSessionWindows.withGap(Time.seconds(30))) // <<< session gap
+				}).window(EventTimeSessionWindows.withGap(Time.seconds(30)))
 				.process(new UserStatWindowFunction<>(new UserProjectSessionStatFactory()))
 				.returns(TypeExtractor.getForClass(UserProjectSessionStat.class));
 
