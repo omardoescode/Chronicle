@@ -116,7 +116,7 @@ services:
       - mynet
 
   jobmanager:
-    build: ./flink
+    build: ./analytics
     ports:
       - "8081:8081"
     command: jobmanager
@@ -136,7 +136,7 @@ services:
       - mynet
 
   taskmanager:
-    build: ./flink
+    build: ./analytics
     depends_on:
       - jobmanager
     command: taskmanager
@@ -153,22 +153,6 @@ services:
         heartbeat.timeout: 60000
     networks:
       - mynet
-
-  # analytics_job:
-  #   build: ./analytics/
-  #   depends_on:
-  #     - jobmanager
-  #     - kafka
-  #   command: >
-  #     bash -c "
-  #       echo 'Waiting for JobManager...';
-  #       sleep 5;
-  #       /opt/flink/bin/flink run \
-  #         -m jobmanager:8081 \
-  #         /opt/flink/usrlib/*.jar
-  #     "
-  #   networks:
-  #     - mynet
 
 volumes:
   postgres_data:
