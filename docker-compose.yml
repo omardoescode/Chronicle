@@ -1,11 +1,43 @@
 services:
+  server:
+    build: ./backend
+    environment:
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+      - POSTGRES_NAME
+      - POSTGRES_HOST
+      - POSTGRES_PORT
+      - JWT_SECRET
+      - KAFKA_URL=kafka:9092
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+    networks:
+      - mynet
+  outbox:
+    build: ./backend
+    environment:
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+      - POSTGRES_NAME
+      - POSTGRES_HOST
+      - POSTGRES_PORT
+      - JWT_SECRET
+      - KAFKA_URL=kafka:9092
+    command: sh -c "sleep 5 && bun run outbox"
+    depends_on:
+      - postgres
+      - kafka
+    networks:
+      - mynet
   postgres:
     image: postgres:16
     container_name: postgres_db
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: secure_password
-      POSTGRES_DB: myapp
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+      - POSTGRES_DB=${POSTGRES_NAME}
     ports:
       - "5432:5432"
     volumes:
@@ -39,12 +71,12 @@ services:
     depends_on:
       - zookeeper
     ports:
-      - "29092:29092"
+      - "${KAFKA_PORT}:${KAFKA_PORT}"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_LISTENERS: INTERNAL://0.0.0.0:9092,EXTERNAL://0.0.0.0:29092
-      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://localhost:29092
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:9092,EXTERNAL://0.0.0.0:${KAFKA_PORT}
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://localhost:${KAFKA_PORT}
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
@@ -54,34 +86,6 @@ services:
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
     networks:
       - mynet
-
-  # connect:
-  #   image: quay.io/debezium/connect:3.3.0.Final
-  #   container_name: connect
-  #   ports:
-  #     - "8083:8083"
-  #   environment:
-  #     - BOOTSTRAP_SERVERS=kafka:9092
-  #     - GROUP_ID=1
-  #     - CONFIG_STORAGE_TOPIC=my_connect_configs
-  #     - OFFSET_STORAGE_TOPIC=my_connect_offsets
-  #     - STATUS_STORAGE_TOPIC=my_connect_statuses
-  #     - CONNECT_REST_ADVERTISED_HOST_NAME=connect
-  #     - CONNECT_PLUGIN_PATH=/kafka/connect,/debezium-plugins
-  #     - CONNECT_KEY_CONVERTER=org.apache.kafka.connect.json.JsonConverter
-  #     - CONNECT_VALUE_CONVERTER=org.apache.kafka.connect.json.JsonConverter
-  #     - CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE=false
-  #     - CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE=false
-  #     - CONNECT_LOG4J_ROOT_LOGLEVEL=INFO
-  #   volumes:
-  #     - ./connectors:/connectors
-  #   depends_on:
-  #     - kafka
-  #     - zookeeper
-  #     - postgres
-  #   networks:
-  #     - mynet
-  #   restart: unless-stopped
 
   kafdrop:
     image: obsidiandynamics/kafdrop:latest
