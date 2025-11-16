@@ -21,7 +21,6 @@ export default class OutboxProcessor {
     await this.producer
       .connect()
       .then(() => console.log("Producer successfully connected"));
-
     const interval = this.intervalMs;
 
     const run = async () => {

@@ -41,6 +41,7 @@ COPY --from=prerelease /usr/src/pylon/.pylon .pylon
 COPY --from=prerelease /usr/src/pylon/package.json .
 COPY --from=prerelease /usr/src/pylon/src src  
 COPY --from=prerelease /usr/src/pylon/tsconfig.json tsconfig.json
+COPY --from=prerelease /usr/src/pylon/migrations migrations
 
 # run the app
 USER bun

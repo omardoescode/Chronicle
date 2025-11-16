@@ -25,10 +25,27 @@ services:
       - POSTGRES_PORT
       - JWT_SECRET
       - KAFKA_URL=kafka:9092
-    command: sh -c "sleep 5 && bun run outbox"
+    command: bun run outbox
+    restart: unless-stopped
     depends_on:
       - postgres
       - kafka
+    networks:
+      - mynet
+
+  init_db:
+    build: ./backend
+    environment:
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+      - POSTGRES_NAME
+      - POSTGRES_HOST
+      - POSTGRES_PORT
+      - JWT_SECRET
+      - KAFKA_URL=kafka:9092
+    command: bun run init_db
+    depends_on:
+      - postgres
     networks:
       - mynet
   postgres:
@@ -137,21 +154,21 @@ services:
     networks:
       - mynet
 
-  analytics_job:
-    build: ./analytics/
-    depends_on:
-      - jobmanager
-      - kafka
-    command: >
-      bash -c "
-        echo 'Waiting for JobManager...';
-        sleep 5;
-        /opt/flink/bin/flink run \
-          -m jobmanager:8081 \
-          /opt/flink/usrlib/*.jar
-      "
-    networks:
-      - mynet
+  # analytics_job:
+  #   build: ./analytics/
+  #   depends_on:
+  #     - jobmanager
+  #     - kafka
+  #   command: >
+  #     bash -c "
+  #       echo 'Waiting for JobManager...';
+  #       sleep 5;
+  #       /opt/flink/bin/flink run \
+  #         -m jobmanager:8081 \
+  #         /opt/flink/usrlib/*.jar
+  #     "
+  #   networks:
+  #     - mynet
 
 volumes:
   postgres_data:

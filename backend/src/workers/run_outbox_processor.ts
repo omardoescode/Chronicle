@@ -15,4 +15,4 @@ const outbox_processor = new OutboxProcessor(
   1000
 );
 
-await outbox_processor.start();
+await outbox_processor.start(); // blocks until failure or completion
