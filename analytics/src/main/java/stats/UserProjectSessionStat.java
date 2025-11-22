@@ -57,9 +57,9 @@ public class UserProjectSessionStat implements IStat {
 	}
 
 	public void add(EnrichedFileSegment seg) {
-		if (seg.getProject_name() == null)
+		if (seg.getProject_path() == null)
 			return;
-		if (!seg.getProject_name().equals(project_path))
+		if (!seg.getProject_path().equals(project_path))
 			return;
 
 		Instant start = Instant.parse(seg.getStart_time());
