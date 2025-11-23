@@ -104,18 +104,22 @@ with combined as (
       and p_start + p_interval > now() - interval '24 hours'
 )
 select
-    min(window_start) as window_start,
-    max(window_end) as window_end,
-    sum(work_duration_ms) as work_duration_ms,
-    round(avg(work_duration_ms))::int as avg_work_duration_ms,
+    p_start as window_start,
+    p_start + p_interval as window_end,
+    coalesce(sum(work_duration_ms), 0) as work_duration_ms,
+    coalesce(round(avg(work_duration_ms))::int, 0) as avg_work_duration_ms,
     count(1) as active_days,
     jsonb_sum_aggregate(array_agg(lang_durations)) as lang_durations,
     jsonb_sum_aggregate(array_agg(machine_durations)) as machine_durations,
     jsonb_sum_aggregate(array_agg(editor_durations)) as editor_durations,
     jsonb_sum_aggregate(array_agg(project_durations)) as project_durations,
     jsonb_sum_aggregate(array_agg(activity_durations)) as activity_durations,
-    jsonb_avg_work_per_weekday(array_agg(work_duration_ms), array_agg(window_start)) as avg_work_per_weekday
-from combined
+    -- THE FIX IS HERE: Coalesce the function call to guarantee '{}' on NULL
+    coalesce(
+        jsonb_avg_work_per_weekday(array_agg(work_duration_ms), array_agg(window_start)),
+        '{}'::jsonb
+    ) as avg_work_per_weekday
+from combined;
 $$;
 
 drop function if exists user_project_analytics_aggregate_period(
@@ -177,9 +181,9 @@ returns table (
           and p_start + p_interval > now() - interval '24 hours'
     )
     select
-        min(window_start) as window_start,
-        max(window_end) as window_end,
-        sum(work_duration_ms) as work_duration_ms,
+        p_start as window_start,
+        p_start + p_interval as window_end,
+        coalesce(sum(work_duration_ms), 0) as work_duration_ms,
         count(1) as active_days,
         jsonb_sum_aggregate(array_agg(lang_durations)) as lang_durations,
         jsonb_sum_aggregate(array_agg(machine_durations)) as machine_durations,
