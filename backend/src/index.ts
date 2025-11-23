@@ -20,7 +20,11 @@ import {
 import * as heartbeat from "./heartbeat/service";
 import * as analytics from "./analytics/service";
 import { WindowSchema, WindowSchemaInputType } from "./analytics/validation";
-import { NormalizedUserSession, UserAnalytics } from "./analytics/types";
+import {
+  NormalizedUserSession,
+  UserAnalytics,
+  UserProjectAnalytics,
+} from "./analytics/types";
 
 export const graphql = {
   Query: {
@@ -41,6 +45,27 @@ export const graphql = {
           parsed_window.data
         );
         return SuccessResponse<UserAnalytics>(data);
+      }
+    ),
+    ProjectAnaltyics: authorized(
+      async (
+        user,
+        project_path: string,
+        window: WindowSchemaInputType
+      ): Promise<AppResponse<UserProjectAnalytics>> => {
+        // validate first
+        const parsed_window = WindowSchema.safeParse(window);
+        if (parsed_window.error) {
+          return ErrorResponse(
+            parsed_window.error.issues.map((x) => x.message)
+          );
+        }
+        const data = await analytics.getUserProjectAnalytics(
+          user.user_id,
+          project_path,
+          parsed_window.data
+        );
+        return SuccessResponse<UserProjectAnalytics>(data);
       }
     ),
     UserLangSessions: authorized(

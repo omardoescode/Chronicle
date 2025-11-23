@@ -14,6 +14,10 @@ export type UserAnalytics = Prettify<{
   active_days: number;
 }>;
 
+export type UserProjectAnalytics = UserAnalytics & {
+  files_durations: Duration;
+};
+
 export type UserSession<T> = T & {
   window_start: Date;
   window_end: Date;
