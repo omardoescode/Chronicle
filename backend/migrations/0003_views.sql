@@ -49,12 +49,12 @@ create or replace function jsonb_avg_work_per_weekday(
     ) s
 $$;
 
-drop function if exists user_analytics_aggregate_period(user_id integer,
+drop function if exists user_analytics_aggregate_period(usr_id integer,
     p_start timestamptz,
     p_interval interval);
 
 create or replace function user_analytics_aggregate_period(
-    user_id integer,
+    usr_id integer,
     p_start timestamptz,
     p_interval interval
 )
@@ -83,7 +83,7 @@ with combined as (
         d.activity_durations,
         d.work_duration_ms
     from user_stats_aggregate_daily d
-    where d.user_id = user_id
+    where d.user_id = usr_id
       and d.window_start >= p_start
       and d.window_start < p_start + p_interval
 
@@ -100,7 +100,7 @@ with combined as (
         r.activity_durations,
         r.work_duration_ms
     from user_stats_rolling_day r
-    where r.user_id = user_id
+    where r.user_id = usr_id
       and p_start + p_interval > now() - interval '24 hours'
 )
 select
@@ -114,23 +114,22 @@ select
     jsonb_sum_aggregate(array_agg(editor_durations)) as editor_durations,
     jsonb_sum_aggregate(array_agg(project_durations)) as project_durations,
     jsonb_sum_aggregate(array_agg(activity_durations)) as activity_durations,
-    -- THE FIX IS HERE: Coalesce the function call to guarantee '{}' on NULL
     coalesce(
         jsonb_avg_work_per_weekday(array_agg(work_duration_ms), array_agg(window_start)),
         '{}'::jsonb
     ) as avg_work_per_weekday
-from combined;
+from combined
 $$;
 
 drop function if exists user_project_analytics_aggregate_period(
-    user_id integer,
+    usr_id integer,
     project_path varchar,
     p_start timestamptz,
     p_interval interval
 );
 
 create or replace function user_project_analytics_aggregate_period(
-    user_id integer,
+    usr_id integer,
     project_path varchar,
     p_start timestamptz,
     p_interval interval
@@ -158,7 +157,7 @@ returns table (
             d.files_durations,
             d.work_duration_ms work_duration_ms
         from user_project_stats_aggregate_daily d
-        where d.user_id = user_id
+        where d.user_id = usr_id
           and d.project_path = project_path
           and d.window_start >= p_start
           and d.window_start < p_start + p_interval
@@ -176,7 +175,7 @@ returns table (
             r.files_durations,
             r.work_duration_ms work_duration_ms
         from user_project_stats_rolling_day r
-        where r.user_id = user_id
+        where r.user_id = usr_id
           and r.project_path = project_path
           and p_start + p_interval > now() - interval '24 hours'
     )
