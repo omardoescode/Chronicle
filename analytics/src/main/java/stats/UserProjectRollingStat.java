@@ -75,7 +75,7 @@ public class UserProjectRollingStat implements IStat {
 		map.put("editor_durations", this.editor_durations);
 		map.put("project_durations", this.project_durations);
 		map.put("activity_durations", this.activity_durations);
-		map.put("file_durations", this.files_durations);
+		map.put("files_durations", this.files_durations);
 		return map;
 	}
 
