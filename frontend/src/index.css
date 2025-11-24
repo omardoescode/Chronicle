@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&family=Inter:wght@300..700&family=Lato:wght@300;400;700;900&family=Poppins:wght@300..700&family=Rubik:wght@300..900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -9,6 +11,10 @@
     height: 100%;
     width: 100%;
     margin: 0;
+  }
+
+  body {
+    @apply font-sans;
   }
 
   :root {

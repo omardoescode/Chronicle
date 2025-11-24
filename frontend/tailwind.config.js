@@ -196,6 +196,15 @@ module.exports = {
         'tremor-title': ['1.125rem', { lineHeight: '1.75rem' }],
         'tremor-metric': ['1.875rem', { lineHeight: '2.25rem' }],
       },
+      fontFamily: {
+        // sans: ['Rubik', 'sans-serif'],
+        // sans: ['Inter', 'sans-serif'],
+        // sans: ['Poppins', 'sans-serif'],
+        // sans: ['Lato', 'sans-serif'],
+        sans: ['Fira Code', 'monospace'],
+
+        mono: ['Fira Code', 'monospace'],
+      },
     },
   },
   plugins: [require('tailwindcss-animate')],
