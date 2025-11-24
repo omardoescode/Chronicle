@@ -14,7 +14,7 @@ export type UserAnalytics = Prettify<{
   active_days: number;
 }>;
 
-export type UserProjectAnalytics = UserAnalytics & {
+export type UserProjectAnalytics = Omit<UserAnalytics, "project_durations"> & {
   files_durations: Duration;
 };
 
