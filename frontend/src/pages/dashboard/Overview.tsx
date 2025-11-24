@@ -208,7 +208,10 @@ export default function DashboardOverview() {
             index="date"
             categories={projectNames}
             colors={colors.daily}
-            valueFormatter={(v) => `${v.toFixed(1)}h`}
+            valueFormatter={(number) => {
+              if (number > 0 && number < 0.1) return '<0.1h'
+              return `${number.toFixed(1)}h`
+            }}
             stack
             yAxisWidth={50}
             showAnimation

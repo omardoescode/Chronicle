@@ -45,7 +45,7 @@ export function DaysRangePicker({ value, onChange, className }: Props) {
         <Button
           variant="outline"
           className={cn(
-            'w-[160px] justify-start text-left font-normal',
+            'justify-start text-left font-normal',
             !value && 'text-muted-foreground',
             className
           )}
