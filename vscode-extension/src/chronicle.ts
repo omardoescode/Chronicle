@@ -143,9 +143,9 @@ export class Chronicle {
 
           vscode.window.showErrorMessage(
             'Error sending API metadata: ' +
-              error.message +
-              ' Cause: ' +
-              error.cause
+            error.message +
+            ' Cause: ' +
+            error.cause
           )
         }
 
@@ -155,9 +155,9 @@ export class Chronicle {
 
         this.config?.log(
           'Error sending API metadata: ' +
-            error.message +
-            ' Cause: ' +
-            error.cause
+          error.message +
+          ' Cause: ' +
+          error.cause
         )
 
         vscode.window.showErrorMessage(
@@ -281,10 +281,10 @@ export class Chronicle {
       start_time: new Date(this.focusedFileAt),
       end_time: end_time,
       segment_type: this.isAIEditing
-        ? 'ai_coding'
+        ? 'ai-coding'
         : this.isDebugging
-        ? 'debugging'
-        : 'coding',
+          ? 'debugging'
+          : 'coding',
       human_line_changes: Math.abs(
         this.lineChanges.human[this.focusedFile] ?? 0
       ),
@@ -364,16 +364,16 @@ export class Chronicle {
         if (this.debuggingAllowed) {
           vscode.window.showErrorMessage(
             'Failed to send heartbeat now, aborting. ' +
-              error.message +
-              ' ,Cause: ' +
-              error.cause
+            error.message +
+            ' ,Cause: ' +
+            error.cause
           )
         }
         this.config?.log(
           'Failed to send heartbeat: ' +
-            error.message +
-            ' ,Cause: ' +
-            error.cause
+          error.message +
+          ' ,Cause: ' +
+          error.cause
         )
         return
       }
