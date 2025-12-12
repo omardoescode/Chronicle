@@ -38,6 +38,16 @@ public class FileSegmentAnalyticsJob {
 		// TODO: Control parallelism
 		env.setParallelism(1);
 
+		String dbUser = System.getenv("POSTGRES_USER");
+		String dbName = System.getenv("POSTGRES_NAME");
+		String dbPass = System.getenv("POSTGRES_PASSWORD");
+		String dbHost = System.getenv("POSTGRES_HOST");
+		String dbPort = System.getenv("POSTGRES_PORT");
+
+		if (dbUser == null || dbPass == null || dbName == null || dbHost == null || dbPort == null) {
+			throw new IllegalStateException("Missing one or more required DB environment variables");
+		}
+
 		Properties consumerConfig = new Properties();
 		try (InputStream stream = FileSegmentAnalyticsJob.class.getClassLoader()
 				.getResourceAsStream("kafka_consumer.properties")) {
@@ -112,8 +122,8 @@ public class FileSegmentAnalyticsJob {
 				.returns(TypeExtractor.getForClass(UserLangSessionStat.class));
 
 		JdbcConnectionOptions jdbcOptions = new JdbcConnectionOptions.JdbcConnectionOptionsBuilder()
-				.withUrl("jdbc:postgresql://postgres_db:5432/myapp").withDriverName("org.postgresql.Driver")
-				.withUsername("admin").withPassword("secure_password").build();
+				.withUrl("jdbc:postgresql://" + dbHost + ":" + dbPort + "/" + dbName)
+				.withDriverName("org.postgresql.Driver").withUsername(dbUser).withPassword(dbPass).build();
 
 		// Sinks using asRecord (createGeneralSink)
 		SinkFunction<UserAggregateStat> dailySink = JdbcSinkFactory.createGeneralSink("user_stats_aggregate_daily",

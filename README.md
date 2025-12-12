@@ -11,6 +11,9 @@ This is a code stats tool extension for vscode (and hopefully neovim in the futu
 
 ```sh
 
+# Copy .env.example to .env
+cp .env.example .env
+
 # Run all backend services
 docker compose up -d 
 

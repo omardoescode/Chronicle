@@ -123,8 +123,12 @@ services:
     volumes:
       - flink_data:/tmp/
     environment:
-      - |
-        FLINK_PROPERTIES=
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_NAME: ${POSTGRES_NAME}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      FLINK_PROPERTIES: |
         jobmanager.rpc.address: jobmanager
         state.backend: hashmap
         state.checkpoints.dir: file:///tmp/flink-checkpoints
